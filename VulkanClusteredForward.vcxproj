@@ -169,16 +169,21 @@
   <ItemGroup>
     <ClCompile Include="Source\Application\Application.cpp" />
     <ClCompile Include="Source\Main.cpp" />
+    <ClCompile Include="Source\Renderer\Camera.cpp" />
     <ClCompile Include="Source\Renderer\TOModel.cpp" />
     <ClCompile Include="Source\Renderer\VRenderer.cpp" />
+    <ClCompile Include="Source\Scene\SampleScene.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application\Application.h" />
+    <ClInclude Include="Source\Renderer\Camera.h" />
     <ClInclude Include="Source\Renderer\Model.h" />
     <ClInclude Include="Source\Renderer\Renderer.h" />
     <ClInclude Include="Source\Renderer\TOModel.h" />
+    <ClInclude Include="Source\Renderer\TransformEntity.h" />
     <ClInclude Include="Source\Renderer\VRenderer.h" />
+    <ClInclude Include="Source\Scene\SampleScene.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="ThirdParty\tinyobjloader\tiny_obj_loader.h" />
   </ItemGroup>

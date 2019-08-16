@@ -3,13 +3,15 @@
 
 #include <iostream>
 
-class Model
+#include "TransformEntity.h"
+
+class Model : public TransformEntity
 {
 public:
-	Model() {}
+	Model() { transform_changed = true; }
 	virtual ~Model() {}
 
-	virtual bool LoadFromPath(std::string path) { return false; }
+	virtual bool LoadFromPath(std::string path) = 0;
 };
 
 #endif // !__MODEL_H__

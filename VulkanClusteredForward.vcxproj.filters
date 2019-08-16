@@ -37,6 +37,12 @@
     <ClCompile Include="Source\Renderer\TOModel.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\Camera.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\SampleScene.cpp">
+      <Filter>Source\Scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ThirdParty\tinyobjloader\tiny_obj_loader.h">
@@ -59,6 +65,15 @@
     </ClInclude>
     <ClInclude Include="Source\Renderer\TOModel.h">
       <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Camera.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\TransformEntity.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SampleScene.h">
+      <Filter>Source\Scene</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

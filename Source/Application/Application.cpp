@@ -4,6 +4,9 @@
 #include "Scene/Scene.h"
 #include "Renderer/Renderer.h"
 
+#define SCREEN_WIDTH	1920.0f
+#define SCREEN_HEIGHT	1080.0f
+
 Application* Application::inst = NULL;
 
 Application::Application()
@@ -18,6 +21,21 @@ Application::Application()
 
 Application::~Application()
 {
+}
+
+float Application::GetWidth()
+{
+	return SCREEN_WIDTH;
+}
+
+float Application::GetHeight()
+{
+	return SCREEN_HEIGHT;
+}
+
+void Application::SetRendererCamera(Camera* cam)
+{
+	renderer->SetCamera(cam);
 }
 
 bool Application::MainLoop()

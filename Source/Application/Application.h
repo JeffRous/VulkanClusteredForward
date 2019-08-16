@@ -26,6 +26,11 @@ public:
 	bool MainLoop();
 	void NextScene(Scene* scene);
 
+	float GetWidth();
+	float GetHeight();
+
+	void SetRendererCamera(Camera* cam);
+
 private:
 	void SceneUpdate(float dt);
 
