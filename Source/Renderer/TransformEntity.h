@@ -30,6 +30,7 @@ public:
 			matrix = glm::translate(matrix, position);
 			transform_changed = false;
 		}
+		return &matrix;
 	}
 
 protected:

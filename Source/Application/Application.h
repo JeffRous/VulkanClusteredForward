@@ -5,6 +5,7 @@
 
 class Scene;
 class Renderer;
+class Camera;
 class Application
 {
 	static Application* inst;

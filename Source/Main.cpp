@@ -14,29 +14,8 @@ int main() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	GLFWwindow* window = glfwCreateWindow(1920, 1080, "Vulkan Clustered Forward", nullptr, nullptr);
-
-	/*uint32_t extensionCount = 0;
-	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-	std::cout << extensionCount << " extensions supported" << std::endl;
-
-	glm::mat4 matrix;
-	glm::vec4 vec;
-	auto test = matrix * vec;
-
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string err;
-	std::string warn;
-
-	std::string filename = "Data/sponza_full/sponza.obj";
-	std::string basepath = "Data/sponza_full/";
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(), basepath.c_str()))
-	{
-		throw std::runtime_error(err);
-	}*/
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	GLFWwindow* window = glfwCreateWindow(Application::Inst()->GetWidth(), Application::Inst()->GetHeight(), "Vulkan Clustered Forward", nullptr, nullptr);
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -44,8 +23,9 @@ int main() {
 			break;
 	}
 
-	glfwDestroyWindow(window);
+	delete Application::Inst();
 
+	glfwDestroyWindow(window);
 	glfwTerminate();
 
 	return 0;

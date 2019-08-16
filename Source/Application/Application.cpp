@@ -2,7 +2,7 @@
 
 #include "Application.h"
 #include "Scene/Scene.h"
-#include "Renderer/Renderer.h"
+#include "Renderer/VRenderer.h"
 
 #define SCREEN_WIDTH	1920.0f
 #define SCREEN_HEIGHT	1080.0f
@@ -17,10 +17,16 @@ Application::Application()
 	change_scene = false;
 	delta_time = 0.0f;
 	time(&last_time);
+
+	renderer = new VulkanRenderer();
 }
 
 Application::~Application()
 {
+	if (renderer != NULL)
+	{
+		delete renderer;
+	}
 }
 
 float Application::GetWidth()
