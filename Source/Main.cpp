@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "Application/Application.h"
+#include "Scene/SampleScene.h"
 
 int main() {
 	glfwInit();
@@ -17,6 +18,8 @@ int main() {
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	GLFWwindow* window = glfwCreateWindow(Application::Inst()->GetWidth(), Application::Inst()->GetHeight(), "Vulkan Clustered Forward", nullptr, nullptr);
 
+	Application::Inst()->CreateRenderer(window);
+	Application::Inst()->NextScene(new SampleScene());
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 		if (!Application::Inst()->MainLoop())

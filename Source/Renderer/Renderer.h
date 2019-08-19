@@ -8,7 +8,7 @@ class Camera;
 class Renderer
 {
 public:
-	Renderer() { camera = NULL; }
+	Renderer(GLFWwindow* win) : window(win) { camera = NULL; }
 	virtual ~Renderer() {}
 
 	virtual void DrawModel(Model* model) = 0;
@@ -19,6 +19,7 @@ public:
 
 protected:
 	Camera* camera;
+	GLFWwindow* window;
 };
 
 #endif // !__RENDERER_H__

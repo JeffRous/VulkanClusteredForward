@@ -4,8 +4,8 @@
 #include "Scene/Scene.h"
 #include "Renderer/VRenderer.h"
 
-#define SCREEN_WIDTH	1920.0f
-#define SCREEN_HEIGHT	1080.0f
+#define SCREEN_WIDTH	1280.0f
+#define SCREEN_HEIGHT	720.0f
 
 Application* Application::inst = NULL;
 
@@ -17,8 +17,6 @@ Application::Application()
 	change_scene = false;
 	delta_time = 0.0f;
 	time(&last_time);
-
-	renderer = new VulkanRenderer();
 }
 
 Application::~Application()
@@ -27,6 +25,11 @@ Application::~Application()
 	{
 		delete renderer;
 	}
+}
+
+void Application::CreateRenderer(GLFWwindow* window)
+{
+	renderer = new VulkanRenderer(window);
 }
 
 float Application::GetWidth()
@@ -63,8 +66,15 @@ bool Application::MainLoop()
 
 void Application::NextScene(Scene* scene)
 {
-	next_scene = scene;
-	change_scene = true;
+	if (current_scene == NULL)
+	{
+		current_scene = scene;
+	}
+	else
+	{
+		next_scene = scene;
+		change_scene = true;
+	}
 }
 
 void Application::SceneUpdate(float dt)

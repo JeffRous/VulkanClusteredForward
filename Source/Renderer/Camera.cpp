@@ -27,13 +27,13 @@ void Camera::SetFov(float f)
 
 void Camera::SetNearDistance(float n)
 {
-	near = n;
+	near_clamp = n;
 	project_changed = true;
 }
 
 void Camera::SetFarDistance(float f)
 {
-	far = f;
+	far_clamp = f;
 	project_changed = true;
 }
 
@@ -51,7 +51,7 @@ glm::mat4x4* Camera::UpdateProjectMatrix()
 {
 	if (project_changed)
 	{
-		project_mat = glm::perspectiveRH(fov, screen_width/screen_height, near, far); /// vulkan is right-hand
+		project_mat = glm::perspectiveRH(fov, screen_width/screen_height, near_clamp, far_clamp); /// vulkan is right-hand
 		project_changed = false;
 	}
 	return &project_mat;

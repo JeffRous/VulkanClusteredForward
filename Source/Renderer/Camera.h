@@ -19,8 +19,8 @@ public:
 
 private:
 	float fov;
-	float near;
-	float far;
+	float near_clamp;
+	float far_clamp;
 	glm::vec3 look_at;
 
 	float screen_width;
