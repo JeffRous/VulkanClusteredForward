@@ -49,13 +49,20 @@ private:
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 
+	void CreateLogicDevice();
+
 	void CreateSwapChain();
 	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-	void CreateLogicDevice();
+	void CreateImageViews();
+
+	void CreateRenderPass();
+
+	void CreateGraphicsPipeline();
+	VkShaderModule createShaderModule(const std::vector<char>& code);
 
 	void CleanUp();
 
@@ -65,7 +72,16 @@ private:
 	VkDevice device;
 	VkQueue graphics_queue;
 	VkSurfaceKHR surface;
-	VkSwapchainKHR swapChain;
+	VkSwapchainKHR swap_chain;
+	std::vector<VkImage> swap_chain_images;
+	VkFormat swap_chain_image_format;
+	VkExtent2D swap_chain_extent;
+	std::vector<VkImageView> swap_chain_image_views;
+	VkShaderModule vert_shader_module;
+	VkShaderModule frag_shader_module;
+	VkRenderPass render_pass;
+	VkPipelineLayout pipeline_layout;
+	VkPipeline graphics_pipeline;
 };
 
 
