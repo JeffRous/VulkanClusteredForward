@@ -23,6 +23,11 @@ bool SampleScene::OnUpdate(float dt)
 	return true;
 }
 
+void SampleScene::OnRender()
+{
+	
+}
+
 void SampleScene::OnExit()
 {
 	

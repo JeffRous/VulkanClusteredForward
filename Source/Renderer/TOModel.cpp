@@ -20,7 +20,7 @@ bool TOModel::LoadFromPath(std::string path)
 	int slashIdx = path.find_last_of("/");
 	if (slashIdx >= 0)
 	{
-		path = path.substr(slashIdx, basePath.length() - slashIdx + 1);
+		basePath = path.substr(slashIdx, path.length() - slashIdx + 1);
 	}
 
 	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(), basePath.c_str()))

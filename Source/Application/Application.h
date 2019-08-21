@@ -40,16 +40,16 @@ public:
 
 private:
 	void SceneUpdate(float dt);
+	void SceneRender();
 
 private:
 	Scene* current_scene;
 	bool update_scene;
 
 	Scene* next_scene;
-	bool change_scene;
 
 	float delta_time;
-	time_t last_time;
+	uint64_t last_time;
 
 	Renderer* renderer;
 };

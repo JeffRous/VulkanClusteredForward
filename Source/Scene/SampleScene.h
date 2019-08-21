@@ -14,6 +14,8 @@ public:
 	virtual bool OnUpdate(float dt);
 	virtual void OnExit();
 
+	virtual void OnRender();
+
 private:
 	Camera* camera;
 

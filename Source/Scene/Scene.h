@@ -10,6 +10,8 @@ public:
 	virtual bool OnEnter() { return false; }
 	virtual bool OnUpdate(float dt) { return false; }
 	virtual void OnExit() {}
+
+	virtual void OnRender() {}
 };
 
 #endif // !__SCENE_H__

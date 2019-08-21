@@ -20,6 +20,9 @@
     <Filter Include="Source\Scene">
       <UniqueIdentifier>{97d7996a-cac0-4fee-bb95-ffcd59e55fc6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Common">
+      <UniqueIdentifier>{290c3788-2f3e-4cc9-b017-ca4d0aac24bf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Main.cpp">
@@ -42,6 +45,9 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\SampleScene.cpp">
       <Filter>Source\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Common\Utils.cpp">
+      <Filter>Source\Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -74,6 +80,9 @@
     </ClInclude>
     <ClInclude Include="Source\Scene\SampleScene.h">
       <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Common\Utils.h">
+      <Filter>Source\Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

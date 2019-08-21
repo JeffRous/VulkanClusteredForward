@@ -3,6 +3,7 @@
 #include "Application.h"
 #include "Scene/Scene.h"
 #include "Renderer/VRenderer.h"
+#include "Common/Utils.h"
 
 #define SCREEN_WIDTH	1280.0f
 #define SCREEN_HEIGHT	720.0f
@@ -14,15 +15,15 @@ Application::Application()
 	current_scene = NULL;
 	next_scene = NULL;
 	update_scene = false;
-	change_scene = false;
 	delta_time = 0.0f;
-	time(&last_time);
+	last_time = Utils::GetMS();
 }
 
 Application::~Application()
 {
 	if (renderer != NULL)
 	{
+		renderer->WaitIdle();
 		delete renderer;
 	}
 }
@@ -50,15 +51,17 @@ void Application::SetRendererCamera(Camera* cam)
 bool Application::MainLoop()
 {
 	/// time offset
-	time_t nowTime;
-	time(&nowTime);
-	delta_time = (float)difftime(nowTime, last_time);
+	uint64_t nowTime = Utils::GetMS();
+	delta_time = (float)(nowTime - last_time) / 1000.0f;
 	last_time = nowTime;
 
 	/// logic
 	SceneUpdate(delta_time);
 
 	/// render
+	SceneRender();
+
+	/// flush
 	renderer->Flush();
 
 	return true;
@@ -73,7 +76,6 @@ void Application::NextScene(Scene* scene)
 	else
 	{
 		next_scene = scene;
-		change_scene = true;
 	}
 }
 
@@ -93,13 +95,14 @@ void Application::SceneUpdate(float dt)
 		{
 			update_scene = current_scene->OnUpdate(dt);
 			scene_updated = true;
-			if (!update_scene)
+			if (!update_scene || next_scene != NULL)
 			{
 				current_scene->OnExit();
+				update_scene = false;
 			}
 		}
 
-		if (change_scene)
+		if (!update_scene)
 		{
 			if (current_scene != NULL)
 			{
@@ -107,7 +110,18 @@ void Application::SceneUpdate(float dt)
 			}
 			current_scene = next_scene;
 			next_scene = NULL;
-			change_scene = false;
 		}
 	} while (!scene_updated);
+}
+
+void Application::SceneRender()
+{
+	renderer->RenderBegin();
+
+	if (update_scene)
+	{
+		current_scene->OnRender();
+	}
+
+	renderer->RenderEnd();
 }

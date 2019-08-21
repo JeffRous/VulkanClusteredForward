@@ -1,5 +1,6 @@
 #include "Utils.h"
 
+#include <windows.h>
 #include <iosfwd>
 #include <fstream>
 
@@ -24,4 +25,11 @@ namespace Utils
 		return buffer;
 	}
 	
+	uint64_t GetMS()
+	{
+		SYSTEMTIME time;
+		GetSystemTime(&time);
+		LONG time_ms = (time.wSecond * 1000) + time.wMilliseconds;
+		return time_ms;
+	}
 };

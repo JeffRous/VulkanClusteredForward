@@ -6,7 +6,8 @@
 
 namespace Utils
 {
-	static std::vector<char> readFile(const std::string& filename);
+	std::vector<char> readFile(const std::string& filename);
+	uint64_t GetMS();
 };
 
 #endif // !__UTILS_H__

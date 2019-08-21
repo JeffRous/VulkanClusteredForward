@@ -7,6 +7,8 @@
 #include <glm/mat4x4.hpp>
 
 #include <iostream>
+#include <exception>
+#include <conio.h>
 
 #include "Application/Application.h"
 #include "Scene/SampleScene.h"
@@ -16,18 +18,24 @@ int main() {
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	
 	GLFWwindow* window = glfwCreateWindow(Application::Inst()->GetWidth(), Application::Inst()->GetHeight(), "Vulkan Clustered Forward", nullptr, nullptr);
-
-	Application::Inst()->CreateRenderer(window);
-	Application::Inst()->NextScene(new SampleScene());
-	while (!glfwWindowShouldClose(window)) {
-		glfwPollEvents();
-		if (!Application::Inst()->MainLoop())
-			break;
+	try {
+		Application::Inst()->CreateRenderer(window);
+		Application::Inst()->NextScene(new SampleScene());
+		while (!glfwWindowShouldClose(window)) {
+			glfwPollEvents();
+			if (!Application::Inst()->MainLoop())
+				break;
+		}
 	}
-
+	catch (std::exception& e)
+	{
+		std::cout << "Catch exception: " << e.what() << std::endl;
+		std::cout << "Press any key to exit." << std::endl;
+		while (!_getch()) {}
+	}
 	delete Application::Inst();
-
 	glfwDestroyWindow(window);
 	glfwTerminate();
 

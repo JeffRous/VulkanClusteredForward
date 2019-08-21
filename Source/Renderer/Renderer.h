@@ -13,7 +13,11 @@ public:
 
 	virtual void DrawModel(Model* model) = 0;
 
+	virtual void RenderBegin() = 0;
+	virtual void RenderEnd() = 0;
 	virtual void Flush() = 0;
+
+	virtual void WaitIdle() = 0;
 
 	void SetCamera(Camera* c) { camera = c; }
 

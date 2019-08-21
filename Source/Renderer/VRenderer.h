@@ -30,13 +30,18 @@ struct QueueFamilyIndices {
 
 class VulkanRenderer : public Renderer
 {
+	const int MAX_FRAMES_IN_FLIGHT = 2;
 public:
 	VulkanRenderer(GLFWwindow* win);
 	virtual ~VulkanRenderer();
 
 	virtual void DrawModel(Model* model);
 
+	virtual void RenderBegin();
+	virtual void RenderEnd();
 	virtual void Flush();
+
+	virtual void WaitIdle();
 
 private:
 	void CreateInstance();
@@ -64,6 +69,14 @@ private:
 	void CreateGraphicsPipeline();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
+	void CreateFramebuffers();
+
+	void CreateCommandPool();
+
+	void CreateCommandBuffers();
+
+	void CreateSemaphores();
+
 	void CleanUp();
 
 private:
@@ -82,6 +95,13 @@ private:
 	VkRenderPass render_pass;
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
+	std::vector<VkFramebuffer> swap_chain_framebuffers;
+	VkCommandPool command_pool;
+	std::vector<VkCommandBuffer> command_buffers;
+	std::vector<VkSemaphore> image_available_semaphores;
+	std::vector<VkSemaphore> render_finished_semaphores;
+	std::vector<VkFence> in_flight_fences;
+	size_t current_frame;
 };
 
 
