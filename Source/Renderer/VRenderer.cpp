@@ -41,7 +41,10 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateCommandBuffers();
 	CreateSemaphores();
 
-	current_frame = 0;
+	clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
+	renderer_frame = 0;
+	present_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;;
+	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[renderer_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
 }
 
 VulkanRenderer::~VulkanRenderer()
@@ -688,38 +691,6 @@ void VulkanRenderer::CreateCommandBuffers()
 	if (vkAllocateCommandBuffers(device, &allocInfo, command_buffers.data()) != VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate command buffers!");
 	}
-
-	for (size_t i = 0; i < command_buffers.size(); i++) {
-		VkCommandBufferBeginInfo beginInfo = {};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-		if (vkBeginCommandBuffer(command_buffers[i], &beginInfo) != VK_SUCCESS) {
-			throw std::runtime_error("failed to begin recording command buffer!");
-		}
-
-		VkRenderPassBeginInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = render_pass;
-		renderPassInfo.framebuffer = swap_chain_framebuffers[i];
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = swap_chain_extent;
-
-		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearColor;
-
-		vkCmdBeginRenderPass(command_buffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-		vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-
-		vkCmdDraw(command_buffers[i], 3, 1, 0, 0);
-
-		vkCmdEndRenderPass(command_buffers[i]);
-
-		if (vkEndCommandBuffer(command_buffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("failed to record command buffer!");
-		}
-	}
 }
 
 void VulkanRenderer::CreateSemaphores()
@@ -744,45 +715,67 @@ void VulkanRenderer::CreateSemaphores()
 			throw std::runtime_error("failed to create semaphores!");
 		}
 	}
+	vkResetFences(device, 1, &in_flight_fences[renderer_frame]);	/// prevent warning
 }
 
 void VulkanRenderer::RenderBegin()
 {
-	
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+	if (vkBeginCommandBuffer(command_buffers[active_command_buffer_idx], &beginInfo) != VK_SUCCESS) {
+		throw std::runtime_error("failed to begin recording command buffer!");
+	}
+
+	VkRenderPassBeginInfo renderPassInfo = {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = render_pass;
+	renderPassInfo.framebuffer = swap_chain_framebuffers[active_command_buffer_idx];
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent = swap_chain_extent;
+
+	VkClearValue clearColor =clear_color;
+	renderPassInfo.clearValueCount = 1;
+	renderPassInfo.pClearValues = &clearColor;
+
+	vkCmdBeginRenderPass(command_buffers[active_command_buffer_idx], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
 }
 
 void VulkanRenderer::RenderEnd()
 {
-	
+	vkCmdEndRenderPass(command_buffers[active_command_buffer_idx]);
+
+	if (vkEndCommandBuffer(command_buffers[active_command_buffer_idx]) != VK_SUCCESS) {
+		throw std::runtime_error("failed to record command buffer!");
+	}
 }
 
 void VulkanRenderer::DrawModel(Model* model)
 {
-	
+	/// todo
 }
 
 void VulkanRenderer::Flush()
 {
-	vkWaitForFences(device, 1, &in_flight_fences[current_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-	vkResetFences(device, 1, &in_flight_fences[current_frame]);
-
-	uint32_t imageIndex;
-	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[current_frame], VK_NULL_HANDLE, &imageIndex);
+	vkWaitForFences(device, 1, &in_flight_fences[present_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+	vkResetFences(device, 1, &in_flight_fences[present_frame]);
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	VkSemaphore waitSemaphores[] = { image_available_semaphores[current_frame] };
+	VkSemaphore waitSemaphores[] = { image_available_semaphores[renderer_frame] };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &command_buffers[imageIndex];
-	VkSemaphore signalSemaphores[] = { render_finished_semaphores[current_frame] };
+	submitInfo.pCommandBuffers = &command_buffers[active_command_buffer_idx];
+	VkSemaphore signalSemaphores[] = { render_finished_semaphores[renderer_frame] };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fences[current_frame]) != VK_SUCCESS) {
+	if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fences[renderer_frame]) != VK_SUCCESS) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
@@ -795,12 +788,15 @@ void VulkanRenderer::Flush()
 	VkSwapchainKHR swapChains[] = { swap_chain };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pImageIndices = &active_command_buffer_idx;
 	presentInfo.pResults = nullptr; // Optional
 
 	vkQueuePresentKHR(graphics_queue, &presentInfo);
 
-	current_frame = (current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+	renderer_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+	present_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[renderer_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
 }
 
 void VulkanRenderer::WaitIdle()

@@ -30,7 +30,10 @@ Application::~Application()
 
 void Application::CreateRenderer(GLFWwindow* window)
 {
-	renderer = new VulkanRenderer(window);
+	VulkanRenderer* vRenderer = new VulkanRenderer(window);
+	vRenderer->SetClearColor({ 0.0f, 0.0f, 0.0f, 1.0f });
+
+	renderer = vRenderer;
 }
 
 float Application::GetWidth()
@@ -120,7 +123,7 @@ void Application::SceneRender()
 
 	if (update_scene)
 	{
-		current_scene->OnRender();
+		current_scene->OnRender(renderer);
 	}
 
 	renderer->RenderEnd();

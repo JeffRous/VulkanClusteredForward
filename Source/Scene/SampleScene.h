@@ -14,11 +14,11 @@ public:
 	virtual bool OnUpdate(float dt);
 	virtual void OnExit();
 
-	virtual void OnRender();
+	virtual void OnRender(Renderer* render);
 
 private:
 	Camera* camera;
-
+	float colorR;
 };
 
 #endif // !__SAMPLE_SCENE_H__

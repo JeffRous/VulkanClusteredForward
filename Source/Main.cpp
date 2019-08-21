@@ -19,7 +19,7 @@ int main() {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	
-	GLFWwindow* window = glfwCreateWindow(Application::Inst()->GetWidth(), Application::Inst()->GetHeight(), "Vulkan Clustered Forward", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow((int)Application::Inst()->GetWidth(), (int)Application::Inst()->GetHeight(), "Vulkan Clustered Forward", nullptr, nullptr);
 	try {
 		Application::Inst()->CreateRenderer(window);
 		Application::Inst()->NextScene(new SampleScene());

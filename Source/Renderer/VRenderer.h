@@ -40,8 +40,10 @@ public:
 	virtual void RenderBegin();
 	virtual void RenderEnd();
 	virtual void Flush();
-
 	virtual void WaitIdle();
+
+	inline void SetClearColor(VkClearValue c) { clear_color = c; }
+	inline VkCommandBuffer CurrentCommandBuffer() { return command_buffers[active_command_buffer_idx]; }
 
 private:
 	void CreateInstance();
@@ -101,7 +103,11 @@ private:
 	std::vector<VkSemaphore> image_available_semaphores;
 	std::vector<VkSemaphore> render_finished_semaphores;
 	std::vector<VkFence> in_flight_fences;
-	size_t current_frame;
+	size_t renderer_frame;
+	size_t present_frame;
+
+	VkClearValue clear_color;
+	uint32_t active_command_buffer_idx;
 };
 
 
