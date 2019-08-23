@@ -4,6 +4,7 @@
 #include "Scene.h"
 #include "Renderer/Camera.h"
 
+class TOModel;
 class SampleScene : public Scene
 {
 public:
@@ -19,6 +20,8 @@ public:
 private:
 	Camera* camera;
 	float colorR;
+
+	TOModel* model;
 };
 
 #endif // !__SAMPLE_SCENE_H__

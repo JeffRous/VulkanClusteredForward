@@ -37,6 +37,7 @@ public:
 	float GetHeight();
 
 	void SetRendererCamera(Camera* cam);
+	Renderer* GetRenderer() { return renderer; }
 
 private:
 	void SceneUpdate(float dt);

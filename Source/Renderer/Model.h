@@ -12,6 +12,7 @@ public:
 	virtual ~Model() {}
 
 	virtual bool LoadFromPath(std::string path) = 0;
+	virtual void Draw() = 0;
 };
 
 #endif // !__MODEL_H__

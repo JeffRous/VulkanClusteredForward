@@ -1,11 +1,13 @@
 #include "SampleScene.h"
 #include "Application/Application.h"
 #include "Renderer/VRenderer.h"
+#include "Renderer/TOModel.h"
 
 SampleScene::SampleScene()
 {
 	camera = new Camera(Application::Inst()->GetWidth(), Application::Inst()->GetHeight());
 	Application::Inst()->SetRendererCamera(camera);
+	model = NULL;
 }
 
 SampleScene::~SampleScene()
@@ -17,6 +19,8 @@ SampleScene::~SampleScene()
 bool SampleScene::OnEnter()
 {
 	colorR = 0.0f;
+	model = new TOModel();
+	model->LoadTestData();
 	return true;
 }
 
@@ -33,10 +37,14 @@ void SampleScene::OnRender(Renderer* render)
 	VulkanRenderer* vRenderer = (VulkanRenderer*)render;
 	VkCommandBuffer cb = vRenderer->CurrentCommandBuffer();
 	vRenderer->SetClearColor({ colorR ,0,0,1});
-	vkCmdDraw(cb, 3, 1, 0, 0);
+	
+	model->Draw();
 }
 
 void SampleScene::OnExit()
 {
-	
+	if (model != NULL)
+	{
+		delete model;
+	}
 }

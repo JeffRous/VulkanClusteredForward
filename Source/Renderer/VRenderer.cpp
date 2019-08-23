@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <array>
 #include <windows.h>
 
 #include <vulkan/vulkan.h>
@@ -97,6 +96,12 @@ void VulkanRenderer::CreateInstance()
 	{
 		throw std::runtime_error("failed to create instance!");
 	}
+}
+
+void VulkanRenderer::CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem)
+{
+	vkDestroyBuffer(device, buffer, nullptr);
+	vkFreeMemory(device, mem, nullptr);
 }
 
 void VulkanRenderer::CleanUp()
@@ -639,12 +644,14 @@ void VulkanRenderer::CreateGraphicsPipeline()
 
 	/// fixed pipeline setting manually
 	/// vertex buffer
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
-	vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	/// primitive type
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
@@ -917,6 +924,56 @@ uint32_t VulkanRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFla
 	}
 
 	throw std::runtime_error("failed to find suitable memory type!");
+}
+
+void VulkanRenderer::CreateVertexBuffer(void* vdata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
+{
+	VkDeviceSize bufferSize = single * length;
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, mem);
+
+	void* data;
+	vkMapMemory(device, mem, 0, bufferSize, 0, &data);
+	memcpy(data, vdata, (size_t)bufferSize);
+	vkUnmapMemory(device, mem);
+}
+
+void VulkanRenderer::CreateIndexBuffer(void* idata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
+{
+	VkDeviceSize bufferSize = single * length;
+
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, mem);
+
+	void* data;
+	vkMapMemory(device, mem, 0, bufferSize, 0, &data);
+	memcpy(data, idata, (size_t)bufferSize);
+	vkUnmapMemory(device, mem);
+}
+
+void VulkanRenderer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
+{
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = size;
+	bufferInfo.usage = usage;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create buffer!");
+	}
+
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+	VkMemoryAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
+
+	if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate buffer memory!");
+	}
+
+	vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
 
 void VulkanRenderer::CreateCommandBuffers()
