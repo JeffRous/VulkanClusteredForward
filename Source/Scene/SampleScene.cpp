@@ -20,7 +20,8 @@ bool SampleScene::OnEnter()
 {
 	colorR = 0.0f;
 	model = new TOModel();
-	model->LoadTestData();
+	model->LoadFromPath("Data/sponza_full/sponza.obj");
+	//model->LoadTestData();
 	return true;
 }
 

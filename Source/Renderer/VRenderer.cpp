@@ -35,7 +35,7 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateSwapChain();
 	CreateImageViews();
 	CreateRenderPass();
-	CreateGraphicsPipeline();
+	CreateGraphicsPipeline(false);
 	CreateCommandPool();
 	CreateDepthResources();
 	CreateFramebuffers();
@@ -620,10 +620,60 @@ void VulkanRenderer::CreateRenderPass()
 	}
 }
 
-void VulkanRenderer::CreateGraphicsPipeline()
+std::array<VkVertexInputBindingDescription, 1> VulkanRenderer::GetBindingDescription()
 {
-	auto vertShaderCode = Utils::readFile("Data/shader/sample_vert.spv");
-	auto fragShaderCode = Utils::readFile("Data/shader/sample_frag.spv");
+	std::array<VkVertexInputBindingDescription, 1> bindingDescriptions = {};
+
+	bindingDescriptions[0].binding = 0;
+	bindingDescriptions[0].stride = sizeof(Vertex);
+	bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	return bindingDescriptions;
+}
+
+std::array<VkVertexInputAttributeDescription, 4> VulkanRenderer::GetAttributeDescriptions()
+{
+	std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions = {};
+
+	attributeDescriptions[0].binding = 0;
+	attributeDescriptions[0].location = 0;
+	attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+	attributeDescriptions[1].binding = 0;
+	attributeDescriptions[1].location = 1;
+	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+	attributeDescriptions[2].binding = 0;
+	attributeDescriptions[2].location = 2;
+	attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attributeDescriptions[2].offset = offsetof(Vertex, texcoord);
+
+	attributeDescriptions[3].binding = 0;
+	attributeDescriptions[3].location = 3;
+	attributeDescriptions[3].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	attributeDescriptions[3].offset = offsetof(Vertex, normal);
+
+	return attributeDescriptions;
+}
+
+void VulkanRenderer::CreateGraphicsPipeline(bool test)
+{
+	std::string vsCode;
+	std::string psCode;
+	if (test)
+	{
+		vsCode = "Data/shader/sample_vert.spv";
+		psCode = "Data/shader/sample_frag.spv";
+	}
+	else
+	{
+		vsCode = "Data/shader/tinyobj_vert.spv";
+		psCode = "Data/shader/tinyobj_frag.spv";
+	}
+	auto vertShaderCode = Utils::readFile(vsCode);
+	auto fragShaderCode = Utils::readFile(psCode);
 
 	vert_shader_module = createShaderModule(vertShaderCode);
 	frag_shader_module = createShaderModule(fragShaderCode);
@@ -644,12 +694,12 @@ void VulkanRenderer::CreateGraphicsPipeline()
 
 	/// fixed pipeline setting manually
 	/// vertex buffer
-	auto bindingDescription = Vertex::getBindingDescription();
-	auto attributeDescriptions = Vertex::getAttributeDescriptions();
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+	auto bindingDescription = GetBindingDescription();
+	auto attributeDescriptions = GetAttributeDescriptions();
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescription.size());
+	vertexInputInfo.pVertexBindingDescriptions = bindingDescription.data();
 	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 

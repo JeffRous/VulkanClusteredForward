@@ -23,10 +23,11 @@ private:
 	std::vector<tinyobj::material_t> materials;
 
 	/// renderering data
-	VkBuffer vertex_buffer;
-	VkDeviceMemory vertex_buffer_memory;
-	VkBuffer index_buffer;
-	VkDeviceMemory index_buffer_memory;
+	std::vector<VkBuffer> vertex_buffers;
+	std::vector<VkDeviceMemory> vertex_buffer_memorys;
+	std::vector<VkBuffer> index_buffers;
+	std::vector<VkDeviceMemory> index_buffer_memorys;
+	std::vector<uint32_t> indicesCounts;
 };
 
 #endif // !__TO_MODEL_H__

@@ -24,6 +24,17 @@ Application::~Application()
 	if (renderer != NULL)
 	{
 		renderer->WaitIdle();
+	}
+	if (update_scene)
+	{
+		current_scene->OnExit();
+	}
+	if (current_scene)
+	{
+		delete current_scene;
+	}
+	if (renderer != NULL)
+	{
 		delete renderer;
 	}
 }
