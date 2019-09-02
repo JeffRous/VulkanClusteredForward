@@ -1080,7 +1080,7 @@ void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
 	writes[0] = {};
 	writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writes[0].pNext = NULL;
-	writes[0].dstSet = desc_set;
+	writes[0].dstSet = desc_sets[renderer_frame];
 	writes[0].descriptorCount = 1;
 	writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	writes[0].pBufferInfo = &bufferInfo;
@@ -1089,7 +1089,7 @@ void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
 
 	vkUpdateDescriptorSets(device, 1, writes, 0, NULL);
 
-	vkCmdBindDescriptorSets(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &desc_set, 0, nullptr);
+	vkCmdBindDescriptorSets(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &desc_sets[renderer_frame], 0, nullptr);
 }
 
 void VulkanRenderer::CreateUniformBuffers()
@@ -1102,24 +1102,25 @@ void VulkanRenderer::CreateDescriptorSets()
 {
 	VkDescriptorPoolSize typeCount[1];
 	typeCount[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	typeCount[0].descriptorCount = 1;
+	typeCount[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
 
 	VkDescriptorPoolCreateInfo descriptorPool = {};
 	descriptorPool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	descriptorPool.pNext = NULL;
-	descriptorPool.maxSets = 1;
+	descriptorPool.maxSets = MAX_FRAMES_IN_FLIGHT;
 	descriptorPool.poolSizeCount = 1;
 	descriptorPool.pPoolSizes = typeCount;
 
 	vkCreateDescriptorPool(device, &descriptorPool, NULL, &desc_pool);
 
+	VkDescriptorSetLayout desc_layouts[2] = { desc_layout, desc_layout };
 	VkDescriptorSetAllocateInfo allocInfo[1];
 	allocInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo[0].pNext = NULL;
 	allocInfo[0].descriptorPool = desc_pool;
-	allocInfo[0].descriptorSetCount = 1;
-	allocInfo[0].pSetLayouts = &desc_layout;
-	vkAllocateDescriptorSets(device, allocInfo, &desc_set);
+	allocInfo[0].descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
+	allocInfo[0].pSetLayouts = desc_layouts;
+	vkAllocateDescriptorSets(device, allocInfo, desc_sets);
 }
 
 void VulkanRenderer::CreateSemaphores()

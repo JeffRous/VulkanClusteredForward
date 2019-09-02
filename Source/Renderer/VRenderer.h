@@ -130,7 +130,7 @@ private:
 	VkRenderPass render_pass;
 	VkDescriptorSetLayout desc_layout;
 	VkDescriptorPool desc_pool;
-	VkDescriptorSet desc_set;
+	VkDescriptorSet desc_sets[2];
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
 	std::vector<VkFramebuffer> swap_chain_framebuffers;
