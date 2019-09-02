@@ -6,6 +6,7 @@
 
 #include "Application/Application.h"
 #include "Common/Utils.h"
+#include "Camera.h"
 #include "VRenderer.h"
 
 #undef max
@@ -40,6 +41,8 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateDepthResources();
 	CreateFramebuffers();
 	CreateCommandBuffers();
+	CreateUniformBuffers();
+	CreateDescriptorSets();
 	CreateSemaphores();
 
 	clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -106,6 +109,8 @@ void VulkanRenderer::CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem)
 
 void VulkanRenderer::CleanUp()
 {
+	CleanBuffer(mvpmtx_uniform_buffer, mvpmtx_uniform_buffer_memory);
+
 	vkDestroyImageView(device, depth_image_view, nullptr);
 	vkDestroyImage(device, depth_image, nullptr);
 	vkFreeMemory(device, depth_image_memory, nullptr);
@@ -116,6 +121,8 @@ void VulkanRenderer::CleanUp()
 		vkDestroyFence(device, in_flight_fences[i], nullptr);
 	}
 	vkDestroyCommandPool(device, command_pool, nullptr);
+	vkDestroyDescriptorSetLayout(device, desc_layout, nullptr);
+	vkDestroyDescriptorPool(device, desc_pool, nullptr);
 
 	for (auto framebuffer : swap_chain_framebuffers) {
 		vkDestroyFramebuffer(device, framebuffer, nullptr);
@@ -789,11 +796,26 @@ void VulkanRenderer::CreateGraphicsPipeline(bool test)
 	colorBlending.blendConstants[2] = 0.0f; // Optional
 	colorBlending.blendConstants[3] = 0.0f; // Optional
 
+	/// uniform layout for mvp
+	VkDescriptorSetLayoutBinding layoutBinding = {};
+	layoutBinding.binding = 0;
+	layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	layoutBinding.descriptorCount = 1;
+	layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	layoutBinding.pImmutableSamplers = NULL;
+
+	VkDescriptorSetLayoutCreateInfo descriptorLayout = {};
+	descriptorLayout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	descriptorLayout.pNext = NULL;
+	descriptorLayout.bindingCount = 1;
+	descriptorLayout.pBindings = &layoutBinding;
+	vkCreateDescriptorSetLayout(device, &descriptorLayout, NULL, &desc_layout);
+
 	/// pipeline layout
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0; // Optional
-	pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &desc_layout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -1041,6 +1063,65 @@ void VulkanRenderer::CreateCommandBuffers()
 	}
 }
 
+void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
+{
+	VkDeviceSize bufferSize = sizeof(glm::mat4x4);
+	void* data;
+	vkMapMemory(device, mvpmtx_uniform_buffer_memory, 0, bufferSize, 0, &data);
+	memcpy(data, &mvpMtx, (size_t)bufferSize);
+	vkUnmapMemory(device, mvpmtx_uniform_buffer_memory);
+
+	VkDescriptorBufferInfo bufferInfo = {};
+	bufferInfo.buffer = mvpmtx_uniform_buffer;
+	bufferInfo.offset = 0;
+	bufferInfo.range = sizeof(glm::mat4x4);
+
+	VkWriteDescriptorSet writes[1];
+	writes[0] = {};
+	writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writes[0].pNext = NULL;
+	writes[0].dstSet = desc_set;
+	writes[0].descriptorCount = 1;
+	writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	writes[0].pBufferInfo = &bufferInfo;
+	writes[0].dstArrayElement = 0;
+	writes[0].dstBinding = 0;
+
+	vkUpdateDescriptorSets(device, 1, writes, 0, NULL);
+
+	vkCmdBindDescriptorSets(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &desc_set, 0, nullptr);
+}
+
+void VulkanRenderer::CreateUniformBuffers()
+{
+	VkDeviceSize bufferSize = sizeof(glm::mat4x4);
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mvpmtx_uniform_buffer, mvpmtx_uniform_buffer_memory);
+}
+
+void VulkanRenderer::CreateDescriptorSets()
+{
+	VkDescriptorPoolSize typeCount[1];
+	typeCount[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	typeCount[0].descriptorCount = 1;
+
+	VkDescriptorPoolCreateInfo descriptorPool = {};
+	descriptorPool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	descriptorPool.pNext = NULL;
+	descriptorPool.maxSets = 1;
+	descriptorPool.poolSizeCount = 1;
+	descriptorPool.pPoolSizes = typeCount;
+
+	vkCreateDescriptorPool(device, &descriptorPool, NULL, &desc_pool);
+
+	VkDescriptorSetAllocateInfo allocInfo[1];
+	allocInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo[0].pNext = NULL;
+	allocInfo[0].descriptorPool = desc_pool;
+	allocInfo[0].descriptorSetCount = 1;
+	allocInfo[0].pSetLayouts = &desc_layout;
+	vkAllocateDescriptorSets(device, allocInfo, &desc_set);
+}
+
 void VulkanRenderer::CreateSemaphores()
 {
 	image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1092,6 +1173,12 @@ void VulkanRenderer::RenderBegin()
 	vkCmdBeginRenderPass(command_buffers[active_command_buffer_idx], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	vkCmdBindPipeline(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+
+	/// set camera
+	if (camera != NULL)
+	{
+		camera->UpdateViewProject();
+	}
 }
 
 void VulkanRenderer::RenderEnd()
@@ -1101,11 +1188,6 @@ void VulkanRenderer::RenderEnd()
 	if (vkEndCommandBuffer(command_buffers[active_command_buffer_idx]) != VK_SUCCESS) {
 		throw std::runtime_error("failed to record command buffer!");
 	}
-}
-
-void VulkanRenderer::DrawModel(Model* model)
-{
-	/// todo
 }
 
 void VulkanRenderer::Flush()

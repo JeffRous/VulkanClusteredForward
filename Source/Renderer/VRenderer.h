@@ -11,11 +11,6 @@
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-
 #include "Renderer.h"
 
 struct SwapChainSupportDetails {
@@ -48,8 +43,6 @@ public:
 	VulkanRenderer(GLFWwindow* win);
 	virtual ~VulkanRenderer();
 
-	virtual void DrawModel(Model* model);
-
 	virtual void RenderBegin();
 	virtual void RenderEnd();
 	virtual void Flush();
@@ -61,6 +54,8 @@ public:
 	void CreateVertexBuffer( void* vdata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateIndexBuffer(void* idata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem);
+
+	void SetMvpMatrix(glm::mat4x4& mvpMtx);
 
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();
@@ -109,9 +104,11 @@ private:
 
 	void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
-	void CreateIndexBuffer();
-
 	void CreateCommandBuffers();
+
+	void CreateUniformBuffers();
+
+	void CreateDescriptorSets();
 
 	void CreateSemaphores();
 
@@ -131,6 +128,9 @@ private:
 	VkShaderModule vert_shader_module;
 	VkShaderModule frag_shader_module;
 	VkRenderPass render_pass;
+	VkDescriptorSetLayout desc_layout;
+	VkDescriptorPool desc_pool;
+	VkDescriptorSet desc_set;
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
 	std::vector<VkFramebuffer> swap_chain_framebuffers;
@@ -148,6 +148,9 @@ private:
 
 	VkClearValue clear_color;
 	uint32_t active_command_buffer_idx;
+
+	VkBuffer mvpmtx_uniform_buffer;
+	VkDeviceMemory mvpmtx_uniform_buffer_memory;
 };
 
 

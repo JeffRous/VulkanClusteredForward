@@ -1,7 +1,8 @@
-#include "SampleScene.h"
 #include "Application/Application.h"
 #include "Renderer/VRenderer.h"
 #include "Renderer/TOModel.h"
+#include "Renderer/Camera.h"
+#include "SampleScene.h"
 
 SampleScene::SampleScene()
 {

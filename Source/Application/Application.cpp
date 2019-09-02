@@ -3,6 +3,7 @@
 #include "Application.h"
 #include "Scene/Scene.h"
 #include "Renderer/VRenderer.h"
+#include "Renderer/Camera.h"
 #include "Common/Utils.h"
 
 #define SCREEN_WIDTH	1280.0f

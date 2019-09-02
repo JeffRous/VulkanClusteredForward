@@ -7,6 +7,7 @@
 #include <vulkan/vulkan_win32.h>
 
 #include "Renderer/VRenderer.h"
+#include "Camera.h"
 #include "Application/Application.h"
 #include "TOModel.h"
 
@@ -71,6 +72,15 @@ void TOModel::Draw()
 	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
 	VkCommandBuffer cb = vRenderer->CurrentCommandBuffer();
 	
+	/// Set model view matrix
+	glm::mat4x4* modelViewMatrix = UpdateMatrix();
+	Camera* cam = vRenderer->GetCamera();
+	if (cam != NULL)
+	{	/// set mvp to shader
+		glm::mat4x4 mvp = (*cam->GetViewProjectMatrix()) * (*modelViewMatrix);
+		vRenderer->SetMvpMatrix(mvp);
+	}
+
 	/// use index buffer
 	if (index_buffers.size() > 0)
 	{

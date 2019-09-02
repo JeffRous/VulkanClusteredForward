@@ -2,8 +2,8 @@
 #define __SAMPLE_SCENE_H__
 
 #include "Scene.h"
-#include "Renderer/Camera.h"
 
+class Camera;
 class TOModel;
 class SampleScene : public Scene
 {
