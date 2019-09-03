@@ -36,7 +36,7 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateSwapChain();
 	CreateImageViews();
 	CreateRenderPass();
-	CreateGraphicsPipeline(false);
+	CreateGraphicsPipeline();
 	CreateCommandPool();
 	CreateDepthResources();
 	CreateFramebuffers();
@@ -109,6 +109,7 @@ void VulkanRenderer::CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem)
 
 void VulkanRenderer::CleanUp()
 {
+	vkUnmapMemory(device, mvpmtx_uniform_buffer_memory);
 	CleanBuffer(mvpmtx_uniform_buffer, mvpmtx_uniform_buffer_memory);
 
 	vkDestroyImageView(device, depth_image_view, nullptr);
@@ -665,20 +666,12 @@ std::array<VkVertexInputAttributeDescription, 4> VulkanRenderer::GetAttributeDes
 	return attributeDescriptions;
 }
 
-void VulkanRenderer::CreateGraphicsPipeline(bool test)
+void VulkanRenderer::CreateGraphicsPipeline()
 {
 	std::string vsCode;
 	std::string psCode;
-	if (test)
-	{
-		vsCode = "Data/shader/sample_vert.spv";
-		psCode = "Data/shader/sample_frag.spv";
-	}
-	else
-	{
-		vsCode = "Data/shader/tinyobj_vert.spv";
-		psCode = "Data/shader/tinyobj_frag.spv";
-	}
+	vsCode = "Data/shader/tinyobj_vert.spv";
+	psCode = "Data/shader/tinyobj_frag.spv";
 	auto vertShaderCode = Utils::readFile(vsCode);
 	auto fragShaderCode = Utils::readFile(psCode);
 
@@ -1065,16 +1058,7 @@ void VulkanRenderer::CreateCommandBuffers()
 
 void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
 {
-	VkDeviceSize bufferSize = sizeof(glm::mat4x4);
-	void* data;
-	vkMapMemory(device, mvpmtx_uniform_buffer_memory, 0, bufferSize, 0, &data);
-	memcpy(data, &mvpMtx, (size_t)bufferSize);
-	vkUnmapMemory(device, mvpmtx_uniform_buffer_memory);
-
-	VkDescriptorBufferInfo bufferInfo = {};
-	bufferInfo.buffer = mvpmtx_uniform_buffer;
-	bufferInfo.offset = 0;
-	bufferInfo.range = sizeof(glm::mat4x4);
+	memcpy(uniform_buffer_data, &mvpMtx, sizeof(glm::mat4x4));
 
 	VkWriteDescriptorSet writes[1];
 	writes[0] = {};
@@ -1083,7 +1067,7 @@ void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
 	writes[0].dstSet = desc_sets[renderer_frame];
 	writes[0].descriptorCount = 1;
 	writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	writes[0].pBufferInfo = &bufferInfo;
+	writes[0].pBufferInfo = &uniform_buffer_info;
 	writes[0].dstArrayElement = 0;
 	writes[0].dstBinding = 0;
 
@@ -1096,6 +1080,12 @@ void VulkanRenderer::CreateUniformBuffers()
 {
 	VkDeviceSize bufferSize = sizeof(glm::mat4x4);
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mvpmtx_uniform_buffer, mvpmtx_uniform_buffer_memory);
+
+	uniform_buffer_info.buffer = mvpmtx_uniform_buffer;
+	uniform_buffer_info.offset = 0;
+	uniform_buffer_info.range = bufferSize;
+
+	vkMapMemory(device, mvpmtx_uniform_buffer_memory, 0, bufferSize, 0, &uniform_buffer_data);
 }
 
 void VulkanRenderer::CreateDescriptorSets()

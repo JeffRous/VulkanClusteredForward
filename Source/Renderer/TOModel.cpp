@@ -12,13 +12,13 @@
 #include "TOModel.h"
 
 const std::vector<Vertex> vertices = {
-	{{0.0f, -0.5f, 0.5f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, 0.5f, 0.5f, 1.0f}, {0.0f, 1.0f, 0.0f}},
-	{{-0.5f, 0.5f, 0.5f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+	{{0.0f, -2.5f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+	{{2.5f, 2.5f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
+	{{-2.5f, 2.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
 
-	{{0.0f, 0.5f, 0.51f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -0.5f, 0.51f, 1.0f}, {0.0f, 1.0f, 0.0f}},
-	{{-0.5f, -0.5f, 0.51f, 1.0f}, {0.0f, 0.0f, 1.0f}}
+	{{0.0f, 0.0f, 0.01f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+	{{5.0f, -2.5f, 0.01f, 1.0f}, {0.0f, 1.0f, 0.0f}},
+	{{-2.5f, -2.5f, 0.01f, 1.0f}, {0.0f, 0.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices = {
@@ -77,7 +77,8 @@ void TOModel::Draw()
 	Camera* cam = vRenderer->GetCamera();
 	if (cam != NULL)
 	{	/// set mvp to shader
-		glm::mat4x4 mvp = (*cam->GetViewProjectMatrix()) * (*modelViewMatrix);
+		glm::mat4x4 mvp = (*cam->GetViewProjectMatrix())*(*modelViewMatrix);
+		///glm::vec4 test_p = mvp * glm::vec4(0.0f, -2.5f, 95.0f, 1.0f);	/// vtx output z is 0-1
 		vRenderer->SetMvpMatrix(mvp);
 	}
 

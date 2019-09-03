@@ -1,7 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-layout (set = 0, binding = 0) uniform bufferVals {
+layout (std140, binding = 0) uniform bufferVals {
     mat4 mvp;
 } myBufferVals;
 
@@ -14,5 +14,7 @@ layout(location = 0) out vec3 fragColor;
 
 void main() {
     gl_Position = myBufferVals.mvp * inPosition;
+    //gl_Position.z = 0.5;
+    //gl_Position.w = 1.0;
     fragColor = inColor;
 }

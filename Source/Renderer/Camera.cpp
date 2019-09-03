@@ -11,7 +11,9 @@ Camera::Camera(float s_width, float s_height)
 	:screen_width(s_width)
 	,screen_height(s_height)
 {
-	glm::vec3 p = glm::vec3(0);
+	glm::vec3 p = glm::vec3(0,0,-5);
+	SetPosition(p);
+	p = glm::vec3(0);
 	LookAt(p);
 	SetNearDistance(0.1f);
 	SetFarDistance(100.0f);
@@ -50,7 +52,7 @@ glm::mat4x4* Camera::UpdateMatrix()
 {
 	if (transform_changed)
 	{
-		matrix = glm::lookAt(look_at, position, glm::vec3(0, -1, 0));	/// vulkan is right-hand
+		matrix = glm::lookAt(position, look_at, glm::vec3(0, 1, 0));	/// vulkan is right-hand
 		transform_changed = false;
 	}
 	return &matrix;

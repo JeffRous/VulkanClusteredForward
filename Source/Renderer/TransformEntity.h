@@ -11,7 +11,7 @@
 class TransformEntity
 {
 public:
-	TransformEntity() { transform_changed = true; }
+	TransformEntity() { transform_changed = true; scale = 1.0f; }
 	virtual ~TransformEntity() {}
 
 	void SetScale(float s) { scale = s; transform_changed = true; }

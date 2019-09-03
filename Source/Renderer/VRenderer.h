@@ -86,7 +86,7 @@ private:
 
 	void CreateRenderPass();
 
-	void CreateGraphicsPipeline(bool test = false);
+	void CreateGraphicsPipeline();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
 	void CreateDepthResources();
@@ -151,6 +151,8 @@ private:
 
 	VkBuffer mvpmtx_uniform_buffer;
 	VkDeviceMemory mvpmtx_uniform_buffer_memory;
+	VkDescriptorBufferInfo uniform_buffer_info;
+	void* uniform_buffer_data;
 };
 
 
