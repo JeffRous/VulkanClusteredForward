@@ -52,7 +52,7 @@ glm::mat4x4* Camera::UpdateMatrix()
 {
 	if (transform_changed)
 	{
-		matrix = glm::lookAt(position, look_at, glm::vec3(0, 1, 0));	/// vulkan is right-hand
+		matrix = glm::lookAt(position, look_at, glm::vec3(0, -1, 0));	/// vulkan is right-hand and y is downward
 		transform_changed = false;
 	}
 	return &matrix;
@@ -74,7 +74,7 @@ void Camera::UpdateViewProject()
 	glm::mat4x4* projMtx = UpdateProjectMatrix();
 	glm::mat4x4 clipMtx = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, -1.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.5f, 0.0f,
-		0.0f, 0.0f, 0.5f, 1.0f);
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f);
 	view_project_mtx = clipMtx * (*projMtx) * (*viewMtx);
 }
