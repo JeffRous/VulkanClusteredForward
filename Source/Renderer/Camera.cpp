@@ -11,12 +11,12 @@ Camera::Camera(float s_width, float s_height)
 	:screen_width(s_width)
 	,screen_height(s_height)
 {
-	glm::vec3 p = glm::vec3(0,0,-5);
+	glm::vec3 p = glm::vec3(0,0,-3000);
 	SetPosition(p);
 	p = glm::vec3(0);
 	LookAt(p);
 	SetNearDistance(0.1f);
-	SetFarDistance(100.0f);
+	SetFarDistance(10000.0f);
 	SetFov(90.0f);
 }
 
