@@ -3,6 +3,7 @@
 
 #include <tiny_obj_loader.h>
 /*view https://github.com/syoyo/tinyobjloader for more informations*/
+#include <stb_image.h>
 
 #include "Model.h"
 

@@ -49,6 +49,12 @@
     <ClCompile Include="Source\Common\Utils.cpp">
       <Filter>Source\Common</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\Texture.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Material.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ThirdParty\tinyobjloader\tiny_obj_loader.h">
@@ -83,6 +89,15 @@
     </ClInclude>
     <ClInclude Include="Source\Common\Utils.h">
       <Filter>Source\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\tinyobjloader\stb_image.h">
+      <Filter>ThirdParty\tinyobjloader</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Material.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Texture.h">
+      <Filter>Source\Renderer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

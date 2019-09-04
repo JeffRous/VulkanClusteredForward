@@ -11,6 +11,9 @@
 #include "Application/Application.h"
 #include "TOModel.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 const std::vector<Vertex> vertices = {
 	{{0.0f, -2.5f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
 	{{2.5f, 2.5f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
@@ -127,6 +130,12 @@ bool TOModel::LoadFromPath(std::string path)
 	{
 		throw std::runtime_error(err);
 		return false;
+	}
+
+	/// materials
+	for (int i = 0; i < materials.size(); i++)
+	{
+
 	}
 
 	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
