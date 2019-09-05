@@ -3,8 +3,8 @@
 
 #include <tiny_obj_loader.h>
 /*view https://github.com/syoyo/tinyobjloader for more informations*/
-#include <stb_image.h>
 
+#include "Material.h"
 #include "Model.h"
 
 class TOModel : public Model
@@ -22,6 +22,9 @@ private:
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
+
+	/// material instance
+	std::vector<Material> material_insts;
 
 	/// renderering data
 	std::vector<VkBuffer> vertex_buffers;

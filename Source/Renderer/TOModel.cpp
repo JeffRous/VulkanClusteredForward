@@ -11,9 +11,6 @@
 #include "Application/Application.h"
 #include "TOModel.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 const std::vector<Vertex> vertices = {
 	{{0.0f, -2.5f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
 	{{2.5f, 2.5f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
