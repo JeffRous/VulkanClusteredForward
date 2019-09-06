@@ -7,6 +7,7 @@
 #include "Application/Application.h"
 #include "Common/Utils.h"
 #include "Camera.h"
+#include "Texture.h"
 #include "VRenderer.h"
 
 #undef max
@@ -42,8 +43,10 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateFramebuffers();
 	CreateCommandBuffers();
 	CreateUniformBuffers();
+	CreateDescriptorSetsPool();
 	CreateDescriptorSets();
 	CreateSemaphores();
+	CreateTextureSampler();
 
 	clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
 	renderer_frame = 0;
@@ -107,14 +110,17 @@ void VulkanRenderer::CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem)
 	vkFreeMemory(device, mem, nullptr);
 }
 
-void VulkanRenderer::CleanImage(VkImage& image, VkDeviceMemory& imageMem)
+void VulkanRenderer::CleanImage(VkImage& image, VkDeviceMemory& imageMem, VkImageView& imageView)
 {
+	vkDestroyImageView(device, imageView, nullptr);
 	vkDestroyImage(device, image, nullptr);
 	vkFreeMemory(device, imageMem, nullptr);
 }
 
 void VulkanRenderer::CleanUp()
 {
+	vkDestroySampler(device, texture_sampler, nullptr);
+
 	vkUnmapMemory(device, mvpmtx_uniform_buffer_memory);
 	CleanBuffer(mvpmtx_uniform_buffer, mvpmtx_uniform_buffer_memory);
 
@@ -803,11 +809,19 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	layoutBinding.pImmutableSamplers = NULL;
 
+	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
+	samplerLayoutBinding.binding = 1;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.pImmutableSamplers = nullptr;
+	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	std::array<VkDescriptorSetLayoutBinding, 2> bindings = { layoutBinding, samplerLayoutBinding };
 	VkDescriptorSetLayoutCreateInfo descriptorLayout = {};
 	descriptorLayout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	descriptorLayout.pNext = NULL;
-	descriptorLayout.bindingCount = 1;
-	descriptorLayout.pBindings = &layoutBinding;
+	descriptorLayout.bindingCount = static_cast<uint32_t>(bindings.size());
+	descriptorLayout.pBindings = bindings.data();
 	vkCreateDescriptorSetLayout(device, &descriptorLayout, NULL, &desc_layout);
 
 	/// pipeline layout
@@ -983,6 +997,36 @@ void VulkanRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevice
 	EndSingleTimeCommands(commandBuffer);
 }
 
+void VulkanRenderer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+{
+	VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+	VkBufferImageCopy region = {};
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = {
+		width,
+		height,
+		1
+	};
+	vkCmdCopyBufferToImage(
+		commandBuffer,
+		buffer,
+		image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1,
+		&region
+	);
+	EndSingleTimeCommands(commandBuffer);
+}
+
 uint32_t VulkanRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
 	VkPhysicalDeviceMemoryProperties memProperties;
@@ -1073,24 +1117,40 @@ void VulkanRenderer::CreateCommandBuffers()
 	}
 }
 
+void VulkanRenderer::UpdateDescriptorSets()
+{
+	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+	descriptorWrites[0] = {};
+	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[0].pNext = NULL;
+	descriptorWrites[0].dstSet = desc_sets[renderer_frame];
+	descriptorWrites[0].descriptorCount = 1;
+	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrites[0].pBufferInfo = &uniform_buffer_info;
+	descriptorWrites[0].dstArrayElement = 0;
+	descriptorWrites[0].dstBinding = 0;
+
+	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[1].dstSet = desc_sets[renderer_frame];
+	descriptorWrites[1].dstBinding = 1;
+	descriptorWrites[1].dstArrayElement = 0;
+	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrites[1].descriptorCount = 1;
+	descriptorWrites[1].pImageInfo = &image_info;
+
+	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
+
+	vkCmdBindDescriptorSets(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &desc_sets[renderer_frame], 0, nullptr);
+}
+
 void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
 {
 	memcpy(uniform_buffer_data, &mvpMtx, sizeof(glm::mat4x4));
+}
 
-	VkWriteDescriptorSet writes[1];
-	writes[0] = {};
-	writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	writes[0].pNext = NULL;
-	writes[0].dstSet = desc_sets[renderer_frame];
-	writes[0].descriptorCount = 1;
-	writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	writes[0].pBufferInfo = &uniform_buffer_info;
-	writes[0].dstArrayElement = 0;
-	writes[0].dstBinding = 0;
-
-	vkUpdateDescriptorSets(device, 1, writes, 0, NULL);
-
-	vkCmdBindDescriptorSets(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &desc_sets[renderer_frame], 0, nullptr);
+void VulkanRenderer::SetTexture(Texture* tex)
+{
+	image_info.imageView = tex->GetImageView();
 }
 
 void VulkanRenderer::CreateUniformBuffers()
@@ -1098,25 +1158,35 @@ void VulkanRenderer::CreateUniformBuffers()
 	VkDeviceSize bufferSize = sizeof(glm::mat4x4);
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mvpmtx_uniform_buffer, mvpmtx_uniform_buffer_memory);
 
-	uniform_buffer_info.buffer = mvpmtx_uniform_buffer;
-	uniform_buffer_info.offset = 0;
-	uniform_buffer_info.range = bufferSize;
-
 	vkMapMemory(device, mvpmtx_uniform_buffer_memory, 0, bufferSize, 0, &uniform_buffer_data);
 }
 
 void VulkanRenderer::CreateDescriptorSets()
 {
-	VkDescriptorPoolSize typeCount[1];
-	typeCount[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	typeCount[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+	VkDeviceSize bufferSize = sizeof(glm::mat4x4);
+	uniform_buffer_info.buffer = mvpmtx_uniform_buffer;
+	uniform_buffer_info.offset = 0;
+	uniform_buffer_info.range = bufferSize;
+
+	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	image_info.imageView = NULL;
+	image_info.sampler = texture_sampler;
+}
+
+void VulkanRenderer::CreateDescriptorSetsPool()
+{
+	std::array<VkDescriptorPoolSize, 2> typeCounts = {};
+	typeCounts[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	typeCounts[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+	typeCounts[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	typeCounts[1].descriptorCount = MAX_FRAMES_IN_FLIGHT;
 
 	VkDescriptorPoolCreateInfo descriptorPool = {};
 	descriptorPool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	descriptorPool.pNext = NULL;
 	descriptorPool.maxSets = MAX_FRAMES_IN_FLIGHT;
-	descriptorPool.poolSizeCount = 1;
-	descriptorPool.pPoolSizes = typeCount;
+	descriptorPool.poolSizeCount = static_cast<uint32_t>(typeCounts.size());
+	descriptorPool.pPoolSizes = typeCounts.data();
 
 	vkCreateDescriptorPool(device, &descriptorPool, NULL, &desc_pool);
 
@@ -1153,6 +1223,31 @@ void VulkanRenderer::CreateSemaphores()
 		}
 	}
 	vkResetFences(device, 1, &in_flight_fences[renderer_frame]);	/// prevent warning
+}
+
+void VulkanRenderer::CreateTextureSampler()
+{
+	VkSamplerCreateInfo samplerInfo = {};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_LINEAR;
+	samplerInfo.minFilter = VK_FILTER_LINEAR;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.anisotropyEnable = VK_TRUE;
+	samplerInfo.maxAnisotropy = 1;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.mipLodBias = 0.0f;
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = 0.0f;
+
+	if (vkCreateSampler(device, &samplerInfo, nullptr, &texture_sampler) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture sampler!");
+	}
 }
 
 void VulkanRenderer::RenderBegin()

@@ -1,4 +1,4 @@
-#ifndef __VULKAN_RENDERER_H__
+﻿#ifndef __VULKAN_RENDERER_H__
 #define	__VULKAN_RENDERER_H__
 
 #include <vector>
@@ -36,6 +36,7 @@ struct Vertex {
 	glm::vec4 normal;
 };
 
+class Texture;
 class VulkanRenderer : public Renderer
 {
 	const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -57,9 +58,15 @@ public:
 	void CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem);
 
 	void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
-	void CleanImage(VkImage& image, VkDeviceMemory& imageMem);
+	void CleanImage(VkImage& image, VkDeviceMemory& imageMem, VkImageView& imageView);
+	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 
 	void SetMvpMatrix(glm::mat4x4& mvpMtx);
+	void SetTexture(Texture* tex);
+	void UpdateDescriptorSets();
+
+	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();
@@ -84,8 +91,6 @@ private:
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	void CreateImageViews();
-	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
-	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 	void CreateRenderPass();
 
@@ -111,9 +116,13 @@ private:
 
 	void CreateUniformBuffers();
 
+	void CreateDescriptorSetsPool();
+
 	void CreateDescriptorSets();
 
 	void CreateSemaphores();
+
+	void CreateTextureSampler();
 
 	void CleanUp();
 
@@ -156,6 +165,10 @@ private:
 	VkDeviceMemory mvpmtx_uniform_buffer_memory;
 	VkDescriptorBufferInfo uniform_buffer_info;
 	void* uniform_buffer_data;
+
+	VkDescriptorImageInfo image_info;
+
+	VkSampler texture_sampler;
 };
 
 

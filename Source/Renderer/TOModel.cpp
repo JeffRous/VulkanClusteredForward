@@ -87,6 +87,10 @@ void TOModel::Draw()
 		///glm::vec4 test_p = mvp * glm::vec4(0.0f, -2.5f, -4.9f, 1.0f);	/// vtx output z is 0-1 for(-4.9 and 95)
 		vRenderer->SetMvpMatrix(mvp);
 	}
+	/// material
+	/// I should put image view descriptor set in individual material
+	/// update material and mvp
+	vRenderer->UpdateDescriptorSets();
 
 	/// use index buffer
 	if (index_buffers.size() > 0)
@@ -189,6 +193,7 @@ bool TOModel::LoadFromPath(std::string path)
 		vertex_buffers.push_back(vertex_buffer);
 		vertex_buffer_memorys.push_back(vertex_buffer_memory);
 		indicesCounts.push_back(static_cast<uint32_t>(vtxNum));
+		matIds.push_back(mesh->material_ids[0]);
 		delete[] vertices;
 	}
 

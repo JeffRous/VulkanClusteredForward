@@ -35,6 +35,7 @@ private:
 	std::vector<VkBuffer> index_buffers;
 	std::vector<VkDeviceMemory> index_buffer_memorys;
 	std::vector<uint32_t> indicesCounts;
+	std::vector<uint32_t> matIds;
 };
 
 #endif // !__TO_MODEL_H__

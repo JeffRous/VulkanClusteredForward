@@ -24,6 +24,8 @@ public:
 	inline int32_t GetWidth() { return tex_width; }
 	inline int32_t GetHeight() { return tex_height; }
 
+	inline VkImageView GetImageView() { return texture_image_view; }
+
 private:
 	stbi_uc* pixels;
 	int32_t tex_width;
@@ -34,11 +36,9 @@ private:
 
 	std::string tex_path;	/// load from path
 
-	VkBuffer		buffer;
-	VkDeviceMemory	mem;
-
-	VkImage			texture_image;
-	VkDeviceMemory	texture_image_memory;
+	VkImage texture_image;
+	VkDeviceMemory texture_image_memory;
+	VkImageView texture_image_view;
 };
 
 class Texture
@@ -52,6 +52,8 @@ public:
 
 	inline int32_t GetWidth() { return tex_data->GetWidth(); }
 	inline int32_t GetHeight() { return tex_data->GetHeight(); }
+
+	inline VkImageView GetImageView() { return tex_data->GetImageView(); }
 
 private:
 	TextureData* tex_data;
