@@ -1,3 +1,12 @@
+#define GLFW_INCLUDE_VULKAN
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_win32.h>
+#include "Application/Application.h"
+#include "Renderer/VREnderer.h"
 #include "Texture.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -7,11 +16,31 @@ TextureData::TextureData(std::string& path)
 {
 	ref_count = 0;
 	LoadFromPath(path);
+
+	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
+	uint32_t texSize = GetWidth() * GetHeight() * 4;
+	vRenderer->CreateImageBuffer(pixels, texSize, buffer, mem);
+
+	if (!SaveOriginalPixel)
+	{
+		if (pixels != NULL)
+		{
+			stbi_image_free(pixels);
+			pixels = NULL;
+		}
+	}
+
+	vRenderer->CreateImage(GetWidth(), GetHeight(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, texture_image, texture_image_memory);
 }
 
 TextureData::~TextureData()
 {
 	assert(ref_count == 0);
+
+	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
+	vRenderer->CleanImage(texture_image, texture_image_memory);
+	vRenderer->CleanBuffer(buffer, mem);
+
 	if (pixels != NULL)
 	{
 		stbi_image_free(pixels);

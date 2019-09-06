@@ -12,7 +12,7 @@ public:
 	Material();
 	virtual ~Material();
 
-	void InitWithTinyMat(tinyobj::material_t* mat);
+	void InitWithTinyMat(tinyobj::material_t* mat, std::string& basePath);
 
 private:
 	tinyobj::material_t* tiny_mat;

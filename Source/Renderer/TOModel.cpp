@@ -32,6 +32,12 @@ TOModel::TOModel()
 
 TOModel::~TOModel()
 {
+	for (int i = 0; i < material_insts.size(); i++)
+	{
+		delete material_insts[i];
+	}
+	material_insts.clear();
+
 	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
 
 	for (int i = 0; i < index_buffers.size(); i++)
@@ -129,10 +135,12 @@ bool TOModel::LoadFromPath(std::string path)
 		return false;
 	}
 
-	/// materials
+	/// material instances
 	for (int i = 0; i < materials.size(); i++)
 	{
-
+		Material* mat = new Material();
+		mat->InitWithTinyMat(&materials[i], basePath);
+		material_insts.push_back(mat);
 	}
 
 	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();

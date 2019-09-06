@@ -107,6 +107,12 @@ void VulkanRenderer::CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem)
 	vkFreeMemory(device, mem, nullptr);
 }
 
+void VulkanRenderer::CleanImage(VkImage& image, VkDeviceMemory& imageMem)
+{
+	vkDestroyImage(device, image, nullptr);
+	vkFreeMemory(device, imageMem, nullptr);
+}
+
 void VulkanRenderer::CleanUp()
 {
 	vkUnmapMemory(device, mvpmtx_uniform_buffer_memory);
@@ -1011,6 +1017,17 @@ void VulkanRenderer::CreateIndexBuffer(void* idata, uint32_t single, uint32_t le
 	void* data;
 	vkMapMemory(device, mem, 0, bufferSize, 0, &data);
 	memcpy(data, idata, (size_t)bufferSize);
+	vkUnmapMemory(device, mem);
+}
+
+void VulkanRenderer::CreateImageBuffer(void* imageData, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
+{
+	VkDeviceSize bufferSize = length;
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, mem);
+
+	void* data;
+	vkMapMemory(device, mem, 0, bufferSize, 0, &data);
+	memcpy(data, imageData, static_cast<size_t>(bufferSize));
 	vkUnmapMemory(device, mem);
 }
 

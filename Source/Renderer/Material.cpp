@@ -1,3 +1,11 @@
+#define GLFW_INCLUDE_VULKAN
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_win32.h>
+
 #include "Material.h"
 
 Material::Material()
@@ -25,25 +33,50 @@ Material::~Material()
 		delete reflection_tex;
 }
 
-void Material::InitWithTinyMat(tinyobj::material_t* mat)
+void Material::InitWithTinyMat(tinyobj::material_t* mat, std::string& basePath)
 {
 	tiny_mat = mat;
 
 	/// load textures
-	if(mat->ambient_texname != "")
-		ambient_tex = new Texture(mat->ambient_texname);
+	std::string fullPath;
+	if (mat->ambient_texname != "")
+	{
+		fullPath = basePath + "/" + mat->ambient_texname;
+		ambient_tex = new Texture(fullPath);
+	}
 	if (mat->diffuse_texname != "")
+	{
+		fullPath = basePath + "/" + mat->diffuse_texname;
 		diffuse_tex = new Texture(mat->diffuse_texname);
+	}
 	if (mat->specular_texname != "")
+	{
+		fullPath = basePath + "/" + mat->specular_texname;
 		specular_tex = new Texture(mat->specular_texname);
+	}
 	if (mat->specular_highlight_texname != "")
+	{
+		fullPath = basePath + "/" + mat->specular_highlight_texname;
 		specular_highlight_tex = new Texture(mat->specular_highlight_texname);
+	}
 	if (mat->bump_texname != "")
+	{
+		fullPath = basePath + "/" + mat->bump_texname;
 		bump_tex = new Texture(mat->bump_texname);
+	}
 	if (mat->displacement_texname != "")
+	{
+		fullPath = basePath + "/" + mat->displacement_texname;
 		displacement_tex = new Texture(mat->displacement_texname);
+	}
 	if (mat->alpha_texname != "")
+	{
+		fullPath = basePath + "/" + mat->alpha_texname;
 		alpha_tex = new Texture(mat->alpha_texname);
+	}
 	if (mat->reflection_texname != "")
+	{
+		fullPath = basePath + "/" + mat->reflection_texname;
 		reflection_tex = new Texture(mat->reflection_texname);
+	}
 }

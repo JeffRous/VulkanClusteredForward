@@ -8,6 +8,7 @@
 
 class TextureData
 {
+	const bool SaveOriginalPixel = false;
 public:
 	TextureData(std::string& path);
 	virtual ~TextureData();
@@ -20,6 +21,9 @@ public:
 
 	inline std::string Path() { return tex_path; }
 
+	inline int32_t GetWidth() { return tex_width; }
+	inline int32_t GetHeight() { return tex_height; }
+
 private:
 	stbi_uc* pixels;
 	int32_t tex_width;
@@ -29,6 +33,12 @@ private:
 	uint32_t ref_count;
 
 	std::string tex_path;	/// load from path
+
+	VkBuffer		buffer;
+	VkDeviceMemory	mem;
+
+	VkImage			texture_image;
+	VkDeviceMemory	texture_image_memory;
 };
 
 class Texture
@@ -39,6 +49,9 @@ public:
 
 	virtual bool InitWithPath(std::string& path);
 	virtual void InitWithTextureData(TextureData* texData);
+
+	inline int32_t GetWidth() { return tex_data->GetWidth(); }
+	inline int32_t GetHeight() { return tex_data->GetHeight(); }
 
 private:
 	TextureData* tex_data;
