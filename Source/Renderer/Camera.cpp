@@ -11,7 +11,7 @@ Camera::Camera(float s_width, float s_height)
 	:screen_width(s_width)
 	,screen_height(s_height)
 {
-	glm::vec3 p = glm::vec3(0,0,-3000);
+	glm::vec3 p = glm::vec3(0,2000,-3000);
 	SetPosition(p);
 	p = glm::vec3(0);
 	LookAt(p);

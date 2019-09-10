@@ -38,7 +38,7 @@ void SampleScene::OnRender(Renderer* render)
 {
 	VulkanRenderer* vRenderer = (VulkanRenderer*)render;
 	VkCommandBuffer cb = vRenderer->CurrentCommandBuffer();
-	vRenderer->SetClearColor({ colorR ,0,0,1});
+	//vRenderer->SetClearColor({ colorR ,0,0,1});
 	
 	model->Draw();
 }

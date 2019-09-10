@@ -24,7 +24,9 @@ public:
 	inline int32_t GetWidth() { return tex_width; }
 	inline int32_t GetHeight() { return tex_height; }
 
-	inline VkImageView GetImageView() { return texture_image_view; }
+	inline VkImageView& GetImageView() { return texture_image_view; }
+	inline VkSampler& GetTextureSampler() { return texture_sampler; }
+	inline VkDescriptorImageInfo* GetImageInfo() { return &image_info; }
 
 private:
 	stbi_uc* pixels;
@@ -39,6 +41,8 @@ private:
 	VkImage texture_image;
 	VkDeviceMemory texture_image_memory;
 	VkImageView texture_image_view;
+	VkSampler texture_sampler;
+	VkDescriptorImageInfo image_info;
 };
 
 class Texture
@@ -53,7 +57,9 @@ public:
 	inline int32_t GetWidth() { return tex_data->GetWidth(); }
 	inline int32_t GetHeight() { return tex_data->GetHeight(); }
 
-	inline VkImageView GetImageView() { return tex_data->GetImageView(); }
+	inline VkImageView& GetImageView() { return tex_data->GetImageView(); }
+	inline VkSampler& GetTextureSampler() { return tex_data->GetTextureSampler(); }
+	inline VkDescriptorImageInfo* GetImageInfo() { return tex_data->GetImageInfo(); }
 
 private:
 	TextureData* tex_data;

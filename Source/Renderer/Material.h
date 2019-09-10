@@ -13,6 +13,13 @@ public:
 	virtual ~Material();
 
 	void InitWithTinyMat(tinyobj::material_t* mat, std::string& basePath);
+	inline VkDescriptorSet* GetDescriptorSets() { return desc_sets; }
+
+	void PrepareToDraw() { desc_sets_updated = false; }
+	bool IsDescSetUpdated() { return desc_sets_updated; }
+	void SetDescUpdated() { desc_sets_updated = true; }
+
+	inline Texture* GetDiffuseTexture() { return diffuse_tex; }
 
 private:
 	tinyobj::material_t* tiny_mat;
@@ -25,6 +32,9 @@ private:
 	Texture* displacement_tex;
 	Texture* alpha_tex;
 	Texture* reflection_tex;
+
+	bool desc_sets_updated;
+	VkDescriptorSet desc_sets[2];
 };
 
 #endif // !__MATERIAL_H__

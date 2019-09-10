@@ -37,9 +37,11 @@ struct Vertex {
 };
 
 class Texture;
+class Material;
 class VulkanRenderer : public Renderer
 {
 	const int MAX_FRAMES_IN_FLIGHT = 2;
+	const int MAX_MATERIAL_NUM = 50;
 public:
 	VulkanRenderer(GLFWwindow* win);
 	virtual ~VulkanRenderer();
@@ -50,6 +52,7 @@ public:
 	virtual void WaitIdle();
 
 	inline void SetClearColor(VkClearValue c) { clear_color = c; }
+	void SetDefaultTex(std::string& path);
 	inline VkCommandBuffer CurrentCommandBuffer() { return command_buffers[active_command_buffer_idx]; }
 
 	void CreateVertexBuffer( void* vdata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
@@ -63,10 +66,16 @@ public:
 
 	void SetMvpMatrix(glm::mat4x4& mvpMtx);
 	void SetTexture(Texture* tex);
-	void UpdateDescriptorSets();
+
+	void AllocateDescriptorSets(VkDescriptorSet* descSets);
+	void UpdateMaterial(Material* mat);
+	void FreeDescriptorSets(VkDescriptorSet* descSets);
 
 	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+	void CreateTextureSampler(VkSampler* sampler);
+	void DestroyTextureSampler(VkSampler* sampler);
 
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();
@@ -122,8 +131,6 @@ private:
 
 	void CreateSemaphores();
 
-	void CreateTextureSampler();
-
 	void CleanUp();
 
 private:
@@ -142,7 +149,6 @@ private:
 	VkRenderPass render_pass;
 	VkDescriptorSetLayout desc_layout;
 	VkDescriptorPool desc_pool;
-	VkDescriptorSet desc_sets[2];
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
 	std::vector<VkFramebuffer> swap_chain_framebuffers;
@@ -165,10 +171,8 @@ private:
 	VkDeviceMemory mvpmtx_uniform_buffer_memory;
 	VkDescriptorBufferInfo uniform_buffer_info;
 	void* uniform_buffer_data;
-
-	VkDescriptorImageInfo image_info;
-
-	VkSampler texture_sampler;
+	VkDescriptorImageInfo* image_info;
+	Texture* default_tex;
 };
 
 

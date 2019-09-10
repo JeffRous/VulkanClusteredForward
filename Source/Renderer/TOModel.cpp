@@ -68,7 +68,7 @@ bool TOModel::LoadTestData()
 	vRenderer->CreateIndexBuffer((void*)indices.data(), sizeof(indices[0]), indices.size(), index_buffer, index_buffer_memory);
 	index_buffers.push_back(index_buffer);
 	index_buffer_memorys.push_back(index_buffer_memory);
-	indicesCounts.push_back(static_cast<uint32_t>(indices.size()));
+	indices_counts.push_back(static_cast<uint32_t>(indices.size()));
 
 	return true;
 }
@@ -87,10 +87,12 @@ void TOModel::Draw()
 		///glm::vec4 test_p = mvp * glm::vec4(0.0f, -2.5f, -4.9f, 1.0f);	/// vtx output z is 0-1 for(-4.9 and 95)
 		vRenderer->SetMvpMatrix(mvp);
 	}
-	/// material
-	/// I should put image view descriptor set in individual material
-	/// update material and mvp
-	vRenderer->UpdateDescriptorSets();
+
+	/// prepare materials
+	for (int i = 0; i < material_insts.size(); i++)
+	{
+		material_insts[i]->PrepareToDraw();
+	}
 
 	/// use index buffer
 	if (index_buffers.size() > 0)
@@ -103,19 +105,32 @@ void TOModel::Draw()
 		}
 		for (int i = 0; i < index_buffers.size(); i++)
 		{
+			if (mat_ids.size() > i && mat_ids[i] >= 0 && material_insts.size() > mat_ids[i] && material_insts[mat_ids[i]] != NULL)
+			{
+				/// material
+				Material* mat = material_insts[mat_ids[i]];
+				vRenderer->SetTexture(mat->GetDiffuseTexture());
+				vRenderer->UpdateMaterial(mat);
+			}
 			vkCmdBindIndexBuffer(cb, index_buffers[i], 0, VK_INDEX_TYPE_UINT16);
-			vkCmdDrawIndexed(cb, indicesCounts[i], 1, 0, 0, 0);
+			vkCmdDrawIndexed(cb, indices_counts[i], 1, 0, 0, 0);
 		}
 	}
 	else
 	{
 		for (int i = 0; i < vertex_buffers.size(); i++)
 		{
+			if (mat_ids.size() > i && mat_ids[i] >= 0 && material_insts.size() > mat_ids[i] && material_insts[mat_ids[i]] != NULL)
+			{
+				/// material
+				Material* mat = material_insts[mat_ids[i]];
+				vRenderer->SetTexture(mat->GetDiffuseTexture());
+				vRenderer->UpdateMaterial(mat);
+			}
 			VkBuffer vertexBuffers[] = { vertex_buffers[i] };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(cb, 0, 1, vertexBuffers, offsets);
-
-			vkCmdDraw(cb, indicesCounts[i], 1, 0, 0);
+			vkCmdDraw(cb, indices_counts[i], 1, 0, 0);
 		}
 	}
 }
@@ -192,8 +207,8 @@ bool TOModel::LoadFromPath(std::string path)
 		vRenderer->CreateVertexBuffer((void*)vertices, sizeof(Vertex), vtxNum, vertex_buffer, vertex_buffer_memory);
 		vertex_buffers.push_back(vertex_buffer);
 		vertex_buffer_memorys.push_back(vertex_buffer_memory);
-		indicesCounts.push_back(static_cast<uint32_t>(vtxNum));
-		matIds.push_back(mesh->material_ids[0]);
+		indices_counts.push_back(static_cast<uint32_t>(vtxNum));
+		mat_ids.push_back(mesh->material_ids[0]);
 		delete[] vertices;
 	}
 

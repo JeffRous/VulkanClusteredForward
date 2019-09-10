@@ -4,9 +4,6 @@
 #include <tiny_obj_loader.h>
 /*view https://github.com/syoyo/tinyobjloader for more informations*/
 
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_win32.h>
-
 #include "Material.h"
 #include "Model.h"
 
@@ -34,8 +31,8 @@ private:
 	std::vector<VkDeviceMemory> vertex_buffer_memorys;
 	std::vector<VkBuffer> index_buffers;
 	std::vector<VkDeviceMemory> index_buffer_memorys;
-	std::vector<uint32_t> indicesCounts;
-	std::vector<uint32_t> matIds;
+	std::vector<uint32_t> indices_counts;
+	std::vector<int32_t> mat_ids;
 };
 
 #endif // !__TO_MODEL_H__

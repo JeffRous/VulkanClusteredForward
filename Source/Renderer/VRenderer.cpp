@@ -8,6 +8,7 @@
 #include "Common/Utils.h"
 #include "Camera.h"
 #include "Texture.h"
+#include "Material.h"
 #include "VRenderer.h"
 
 #undef max
@@ -46,16 +47,25 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateDescriptorSetsPool();
 	CreateDescriptorSets();
 	CreateSemaphores();
-	CreateTextureSampler();
 
 	clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
 	renderer_frame = 0;
 	present_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;;
 	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[renderer_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
+	default_tex = NULL;
+}
+
+void VulkanRenderer::SetDefaultTex(std::string& path)
+{
+	default_tex = new Texture(path);
 }
 
 VulkanRenderer::~VulkanRenderer()
 {
+	if (default_tex)
+	{
+		delete default_tex;
+	}
 	CleanUp();
 }
 
@@ -119,8 +129,6 @@ void VulkanRenderer::CleanImage(VkImage& image, VkDeviceMemory& imageMem, VkImag
 
 void VulkanRenderer::CleanUp()
 {
-	vkDestroySampler(device, texture_sampler, nullptr);
-
 	vkUnmapMemory(device, mvpmtx_uniform_buffer_memory);
 	CleanBuffer(mvpmtx_uniform_buffer, mvpmtx_uniform_buffer_memory);
 
@@ -1117,30 +1125,36 @@ void VulkanRenderer::CreateCommandBuffers()
 	}
 }
 
-void VulkanRenderer::UpdateDescriptorSets()
+void VulkanRenderer::UpdateMaterial(Material* mat)
 {
-	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
-	descriptorWrites[0] = {};
-	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[0].pNext = NULL;
-	descriptorWrites[0].dstSet = desc_sets[renderer_frame];
-	descriptorWrites[0].descriptorCount = 1;
-	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorWrites[0].pBufferInfo = &uniform_buffer_info;
-	descriptorWrites[0].dstArrayElement = 0;
-	descriptorWrites[0].dstBinding = 0;
+	VkDescriptorSet* descSets = mat->GetDescriptorSets();
+	if (!mat->IsDescSetUpdated())
+	{
+		std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+		descriptorWrites[0] = {};
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].pNext = NULL;
+		descriptorWrites[0].dstSet = descSets[renderer_frame];
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].pBufferInfo = &uniform_buffer_info;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].dstBinding = 0;
 
-	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[1].dstSet = desc_sets[renderer_frame];
-	descriptorWrites[1].dstBinding = 1;
-	descriptorWrites[1].dstArrayElement = 0;
-	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[1].descriptorCount = 1;
-	descriptorWrites[1].pImageInfo = &image_info;
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = descSets[renderer_frame];
+		descriptorWrites[1].dstBinding = 1;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pImageInfo = image_info;
 
-	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
+		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
 
-	vkCmdBindDescriptorSets(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &desc_sets[renderer_frame], 0, nullptr);
+		mat->SetDescUpdated();
+	}
+
+	vkCmdBindDescriptorSets(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descSets[renderer_frame], 0, nullptr);
 }
 
 void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
@@ -1150,7 +1164,10 @@ void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
 
 void VulkanRenderer::SetTexture(Texture* tex)
 {
-	image_info.imageView = tex->GetImageView();
+	if (tex != NULL)
+		image_info = tex->GetImageInfo();
+	else
+		image_info = default_tex->GetImageInfo();
 }
 
 void VulkanRenderer::CreateUniformBuffers()
@@ -1167,29 +1184,29 @@ void VulkanRenderer::CreateDescriptorSets()
 	uniform_buffer_info.buffer = mvpmtx_uniform_buffer;
 	uniform_buffer_info.offset = 0;
 	uniform_buffer_info.range = bufferSize;
-
-	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	image_info.imageView = NULL;
-	image_info.sampler = texture_sampler;
 }
 
 void VulkanRenderer::CreateDescriptorSetsPool()
 {
 	std::array<VkDescriptorPoolSize, 2> typeCounts = {};
 	typeCounts[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	typeCounts[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+	typeCounts[0].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
 	typeCounts[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	typeCounts[1].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+	typeCounts[1].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
 
 	VkDescriptorPoolCreateInfo descriptorPool = {};
 	descriptorPool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	descriptorPool.pNext = NULL;
-	descriptorPool.maxSets = MAX_FRAMES_IN_FLIGHT;
+	descriptorPool.maxSets = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
 	descriptorPool.poolSizeCount = static_cast<uint32_t>(typeCounts.size());
 	descriptorPool.pPoolSizes = typeCounts.data();
+	descriptorPool.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 	vkCreateDescriptorPool(device, &descriptorPool, NULL, &desc_pool);
+}
 
+void VulkanRenderer::AllocateDescriptorSets(VkDescriptorSet* descSets)
+{
 	VkDescriptorSetLayout desc_layouts[2] = { desc_layout, desc_layout };
 	VkDescriptorSetAllocateInfo allocInfo[1];
 	allocInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1197,7 +1214,12 @@ void VulkanRenderer::CreateDescriptorSetsPool()
 	allocInfo[0].descriptorPool = desc_pool;
 	allocInfo[0].descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
 	allocInfo[0].pSetLayouts = desc_layouts;
-	vkAllocateDescriptorSets(device, allocInfo, desc_sets);
+	vkAllocateDescriptorSets(device, allocInfo, descSets);
+}
+
+void VulkanRenderer::FreeDescriptorSets(VkDescriptorSet* descSets)
+{
+	vkFreeDescriptorSets(device, desc_pool, MAX_FRAMES_IN_FLIGHT, descSets);
 }
 
 void VulkanRenderer::CreateSemaphores()
@@ -1225,7 +1247,7 @@ void VulkanRenderer::CreateSemaphores()
 	vkResetFences(device, 1, &in_flight_fences[renderer_frame]);	/// prevent warning
 }
 
-void VulkanRenderer::CreateTextureSampler()
+void VulkanRenderer::CreateTextureSampler(VkSampler* sampler)
 {
 	VkSamplerCreateInfo samplerInfo = {};
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1234,7 +1256,7 @@ void VulkanRenderer::CreateTextureSampler()
 	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.anisotropyEnable = VK_TRUE;
+	samplerInfo.anisotropyEnable = VK_FALSE;
 	samplerInfo.maxAnisotropy = 1;
 	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
@@ -1245,9 +1267,14 @@ void VulkanRenderer::CreateTextureSampler()
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 0.0f;
 
-	if (vkCreateSampler(device, &samplerInfo, nullptr, &texture_sampler) != VK_SUCCESS) {
+	if (vkCreateSampler(device, &samplerInfo, nullptr, sampler) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create texture sampler!");
 	}
+}
+
+void VulkanRenderer::DestroyTextureSampler(VkSampler* sampler)
+{
+	vkDestroySampler(device, *sampler, nullptr);
 }
 
 void VulkanRenderer::RenderBegin()
