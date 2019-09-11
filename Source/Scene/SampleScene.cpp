@@ -23,6 +23,7 @@ bool SampleScene::OnEnter()
 	colorR = 0.0f;
 	model = new TOModel();
 	model->LoadFromPath("Data/sponza_full/sponza.obj");
+	///model->LoadFromPath("Data/lost-empire/lost_empire.obj");
 	///glm::vec3 rotate = glm::vec3(-90, 0, 0);
 	///model->SetRotation(rotate);
 	//model->LoadTestData();

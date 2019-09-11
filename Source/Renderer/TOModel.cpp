@@ -173,43 +173,67 @@ bool TOModel::LoadFromPath(std::string path)
 	{
 		tinyobj::shape_t* shape = &shapes[i];
 		tinyobj::mesh_t* mesh = &shape->mesh;
-		int vtxNum = mesh->indices.size();
-		assert(mesh->num_face_vertices.size() == vtxNum / 3);
+		int totalVtxNum = mesh->indices.size();
+		assert(mesh->num_face_vertices.size() == totalVtxNum / 3);
 
-		Vertex* vertices = new Vertex[vtxNum];
-		for (int j = 0; j < vtxNum; j++)
+		/// sub mesh precalculate
+		std::vector<int> subMeshTriIdxs;
+		std::vector<int> subMeshMatIds;
+		int matId = mesh->material_ids[0];
+		for (int j = 0; j < mesh->material_ids.size(); j++)
 		{
-			int idx = mesh->indices[j].vertex_index;
-			vertices[j].pos.x = attrib.vertices[idx * 3 + 0];
-			vertices[j].pos.y = attrib.vertices[idx * 3 + 1];
-			vertices[j].pos.z = attrib.vertices[idx * 3 + 2];
-			vertices[j].pos.w = 1.0f;
-			if (hasWeight)
-				vertices[j].pos.w = attrib.vertex_weights[idx];
-			vertices[j].color.r = attrib.colors[idx * 3 + 0];
-			vertices[j].color.g = attrib.colors[idx * 3 + 1];
-			vertices[j].color.b = attrib.colors[idx * 3 + 2];
-
-			idx = mesh->indices[j].texcoord_index;
-			vertices[j].texcoord.x = attrib.texcoords[idx * 2 + 0];
-			vertices[j].texcoord.y = attrib.texcoords[idx * 2 + 1];
-			if (hasWs)
+			if (mesh->material_ids[j] != matId)
 			{
-				vertices[j].texcoord.z = attrib.texcoord_ws[idx];
+				subMeshMatIds.push_back(matId);
+				subMeshTriIdxs.push_back(j);
+				matId = mesh->material_ids[j];
 			}
-
-			idx = mesh->indices[j].normal_index;
-			vertices[j].normal.x = attrib.normals[idx * 3 + 0];
-			vertices[j].normal.y = attrib.normals[idx * 3 + 1];
-			vertices[j].normal.z = attrib.normals[idx * 3 + 2];
-			vertices[j].normal.w = 1.0f;
 		}
-		vRenderer->CreateVertexBuffer((void*)vertices, sizeof(Vertex), vtxNum, vertex_buffer, vertex_buffer_memory);
-		vertex_buffers.push_back(vertex_buffer);
-		vertex_buffer_memorys.push_back(vertex_buffer_memory);
-		indices_counts.push_back(static_cast<uint32_t>(vtxNum));
-		mat_ids.push_back(mesh->material_ids[0]);
-		delete[] vertices;
+		subMeshMatIds.push_back(matId);
+		subMeshTriIdxs.push_back((int)mesh->material_ids.size());
+
+		/// sub mesh vb
+		int startVtxIdx = 0;
+		for (int k = 0; k < subMeshMatIds.size(); k++)
+		{
+			int vtxNum = (subMeshTriIdxs[k] - startVtxIdx) * 3;
+			Vertex* vertices = new Vertex[vtxNum];
+			for (int j = 0; j < vtxNum; j++)
+			{
+				int idx = mesh->indices[startVtxIdx * 3 + j].vertex_index;
+				vertices[j].pos.x = attrib.vertices[idx * 3 + 0];
+				vertices[j].pos.y = attrib.vertices[idx * 3 + 1];
+				vertices[j].pos.z = attrib.vertices[idx * 3 + 2];
+				vertices[j].pos.w = 1.0f;
+				if (hasWeight)
+					vertices[j].pos.w = attrib.vertex_weights[idx];
+				vertices[j].color.r = attrib.colors[idx * 3 + 0];
+				vertices[j].color.g = attrib.colors[idx * 3 + 1];
+				vertices[j].color.b = attrib.colors[idx * 3 + 2];
+
+				idx = mesh->indices[startVtxIdx * 3 + j].texcoord_index;
+				vertices[j].texcoord.x = attrib.texcoords[idx * 2 + 0];
+				vertices[j].texcoord.y = attrib.texcoords[idx * 2 + 1];
+				if (hasWs)
+				{
+					vertices[j].texcoord.z = attrib.texcoord_ws[idx];
+				}
+
+				idx = mesh->indices[startVtxIdx * 3 + j].normal_index;
+				vertices[j].normal.x = attrib.normals[idx * 3 + 0];
+				vertices[j].normal.y = attrib.normals[idx * 3 + 1];
+				vertices[j].normal.z = attrib.normals[idx * 3 + 2];
+				vertices[j].normal.w = 1.0f;
+			}
+			vRenderer->CreateVertexBuffer((void*)vertices, sizeof(Vertex), vtxNum, vertex_buffer, vertex_buffer_memory);
+			vertex_buffers.push_back(vertex_buffer);
+			vertex_buffer_memorys.push_back(vertex_buffer_memory);
+			indices_counts.push_back(static_cast<uint32_t>(vtxNum));
+			mat_ids.push_back(subMeshMatIds[k]);
+			delete[] vertices;
+
+			startVtxIdx = subMeshTriIdxs[k];
+		}
 	}
 
 	return true;
