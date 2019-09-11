@@ -20,6 +20,17 @@ public:
 
 	glm::mat4x4* GetViewProjectMatrix() { return &view_project_mtx; }
 
+	glm::vec3 GetLookAtPosition() { return look_at; }
+
+	void UpdateLookAt();
+	glm::vec3 GetLookAtDir() { return look_at_dir; }
+	float GetLookAtDist() { return look_at_dist; }
+	glm::vec3 GetCurrentPosition() { return current_pos; }
+	glm::vec3 GetCurrentLookAt() { return current_look_at; }
+	glm::vec3 GetCurrentLookAtDir() { return current_look_at_dir; }
+	float GetBaseScrollOffset() { return base_scroll_offset; }
+	glm::vec2 GetBaseMoveOffset() { return base_move_offset; }
+
 private:
 	void UpdateViewProject();
 	glm::mat4x4* UpdateProjectMatrix();
@@ -37,6 +48,14 @@ private:
 	glm::mat4x4 project_mat;
 
 	glm::mat4x4 view_project_mtx;
+
+	glm::vec3 look_at_dir;
+	float look_at_dist;
+	glm::vec3 current_pos;
+	glm::vec3 current_look_at;
+	glm::vec3 current_look_at_dir;
+	float base_scroll_offset;
+	glm::vec2 base_move_offset;
 };
 
 #endif // !__CAMERA_H__

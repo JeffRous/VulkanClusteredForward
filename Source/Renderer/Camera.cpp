@@ -11,13 +11,14 @@ Camera::Camera(float s_width, float s_height)
 	:screen_width(s_width)
 	,screen_height(s_height)
 {
-	glm::vec3 p = glm::vec3(0,2000,-3000);
+	glm::vec3 p = glm::vec3(1027,183,46);
 	SetPosition(p);
-	p = glm::vec3(0);
+	p = glm::vec3(-96,155,-14);
 	LookAt(p);
 	SetNearDistance(0.1f);
 	SetFarDistance(10000.0f);
-	SetFov(90.0f);
+	SetFov(45.0f);
+	UpdateLookAt();
 }
 
 Camera::~Camera()
@@ -52,10 +53,22 @@ glm::mat4x4* Camera::UpdateMatrix()
 {
 	if (transform_changed)
 	{
-		matrix = glm::lookAt(position, look_at, glm::vec3(0, -1, 0));	/// vulkan is right-hand and y is downward
+		matrix = glm::lookAt(position, look_at, glm::vec3(0, 1, 0));	/// vulkan is right-hand and y is downward
 		transform_changed = false;
 	}
 	return &matrix;
+}
+
+void Camera::UpdateLookAt()
+{
+	glm::vec3 lookAtVec = GetLookAtPosition() - GetPosition();
+	look_at_dir = glm::normalize(lookAtVec);
+	look_at_dist = glm::length(lookAtVec);
+	current_pos = position;
+	current_look_at = look_at;
+	current_look_at_dir = look_at_dir;
+	base_scroll_offset = Application::Inst()->GetScrollOffset();
+	base_move_offset = Application::Inst()->GetMoveOffset();
 }
 
 glm::mat4x4* Camera::UpdateProjectMatrix()

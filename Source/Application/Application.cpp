@@ -17,11 +17,15 @@ Application::Application()
 	next_scene = NULL;
 	update_scene = false;
 	delta_time = 0.0f;
+	control_state = 0;
+	scroll_offset = 0.0f;
 	last_time = Utils::GetMS();
 }
 
 Application::~Application()
 {
+	glfwSetInputMode(current_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
 	if (renderer != NULL)
 	{
 		renderer->WaitIdle();
@@ -40,14 +44,67 @@ Application::~Application()
 	}
 }
 
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	Application::Inst()->SetMoveOffset(glm::vec2(xpos, ypos));
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	int controlState = Application::Inst()->GetControlState();
+	if (button == GLFW_MOUSE_BUTTON_RIGHT)	/// shift look at
+	{
+		if (action == GLFW_PRESS && controlState == 0)
+		{
+			controlState = 2;
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+		}
+		else if (action == GLFW_RELEASE && controlState == 2)
+		{
+			controlState = 0;
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+	}
+	else if (button == GLFW_MOUSE_BUTTON_LEFT)	/// rotate around look at
+	{
+		if (action == GLFW_PRESS && controlState == 0)
+		{
+			controlState = 1;
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+		}
+		else if (action == GLFW_RELEASE && controlState == 1)
+		{
+			controlState = 0;
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+	}
+	Application::Inst()->SetControlState(controlState);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	float scrollOffset = Application::Inst()->GetScrollOffset();
+	scrollOffset += (float)yoffset;
+	Application::Inst()->SetScrollOffset(scrollOffset);
+}
+
 void Application::CreateRenderer(GLFWwindow* window)
 {
+	current_window = window;
 	VulkanRenderer* vRenderer = new VulkanRenderer(window);
 	renderer = vRenderer;
 
 	vRenderer->SetClearColor({ 0.0f, 0.0f, 0.0f, 1.0f });
 	std::string tex_path = "Data/shader/default.png";
 	vRenderer->SetDefaultTex(tex_path);
+
+	/// input initialize
+	glfwSetInputMode(current_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	glfwSetCursorPosCallback(window, cursor_position_callback);
+	glfwSetMouseButtonCallback(current_window, mouse_button_callback);
+	glfwSetScrollCallback(current_window, scroll_callback);
 }
 
 float Application::GetWidth()

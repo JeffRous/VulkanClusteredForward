@@ -3,6 +3,13 @@
 
 #include <iostream>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3.h>
@@ -39,6 +46,13 @@ public:
 	void SetRendererCamera(Camera* cam);
 	Renderer* GetRenderer() { return renderer; }
 
+	int GetControlState() { return control_state; }
+	void SetControlState(int state) { control_state = state; }
+	float GetScrollOffset() { return scroll_offset; }
+	void SetScrollOffset(float offset) { scroll_offset = offset; }
+	glm::vec2 GetMoveOffset() { return move_offset; }
+	void SetMoveOffset(glm::vec2 offset) { move_offset = offset; }
+
 private:
 	void SceneUpdate(float dt);
 	void SceneRender();
@@ -53,6 +67,12 @@ private:
 	uint64_t last_time;
 
 	Renderer* renderer;
+
+	GLFWwindow* current_window;
+
+	int control_state;	// 0 normal 1 rotate 2 shift
+	float scroll_offset;
+	glm::vec2 move_offset;
 };
 
 #endif // !__APPLICATION_H__

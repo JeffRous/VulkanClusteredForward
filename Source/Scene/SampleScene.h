@@ -18,10 +18,14 @@ public:
 	virtual void OnRender(Renderer* render);
 
 private:
+	void UpdateCameraByInput();
+
+private:
 	Camera* camera;
 	float colorR;
 
 	TOModel* model;
+	int last_control_state;
 };
 
 #endif // !__SAMPLE_SCENE_H__
