@@ -15,12 +15,6 @@ SampleScene::SampleScene()
 
 SampleScene::~SampleScene()
 {
-	if (model != NULL)
-		delete model;
-
-	if (light != NULL)
-		delete light;
-
 	if( camera != NULL )
 		delete camera;
 }
@@ -120,4 +114,7 @@ void SampleScene::OnExit()
 	{
 		delete model;
 	}
+
+	if (light != NULL)
+		delete light;
 }
