@@ -19,6 +19,7 @@ public:
 	bool IsDescSetUpdated() { return desc_sets_updated; }
 	void SetDescUpdated() { desc_sets_updated = true; }
 
+	inline Texture* GetAmbientTexture() { return ambient_tex; }
 	inline Texture* GetDiffuseTexture() { return diffuse_tex; }
 
 private:

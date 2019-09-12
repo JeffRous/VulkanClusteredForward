@@ -213,7 +213,7 @@ bool TOModel::LoadFromPath(std::string path)
 
 				idx = mesh->indices[startVtxIdx * 3 + j].texcoord_index;
 				vertices[j].texcoord.x = attrib.texcoords[idx * 2 + 0];
-				vertices[j].texcoord.y = attrib.texcoords[idx * 2 + 1];
+				vertices[j].texcoord.y = 1.0f - attrib.texcoords[idx * 2 + 1];
 				if (hasWs)
 				{
 					vertices[j].texcoord.z = attrib.texcoord_ws[idx];
