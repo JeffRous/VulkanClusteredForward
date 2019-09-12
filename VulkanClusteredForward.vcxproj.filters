@@ -55,6 +55,9 @@
     <ClCompile Include="Source\Renderer\Material.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\Light.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ThirdParty\tinyobjloader\tiny_obj_loader.h">
@@ -97,6 +100,9 @@
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Texture.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Light.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
   </ItemGroup>

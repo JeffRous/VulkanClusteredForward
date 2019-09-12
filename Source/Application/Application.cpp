@@ -164,6 +164,7 @@ void Application::SceneUpdate(float dt)
 		if (!update_scene && !current_scene->OnEnter())
 		{
 			current_scene->OnExit();
+			renderer->OnSceneExit();
 		}
 		else
 		{
@@ -172,6 +173,7 @@ void Application::SceneUpdate(float dt)
 			if (!update_scene || next_scene != NULL)
 			{
 				current_scene->OnExit();
+				renderer->OnSceneExit();
 				update_scene = false;
 			}
 		}

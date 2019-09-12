@@ -9,6 +9,7 @@
 #include "Camera.h"
 #include "Texture.h"
 #include "Material.h"
+#include "Light.h"
 #include "VRenderer.h"
 
 #undef max
@@ -1180,6 +1181,7 @@ void VulkanRenderer::CreateUniformBuffers()
 
 void VulkanRenderer::CreateDescriptorSets()
 {
+	/// mvp in uniform buffer
 	VkDeviceSize bufferSize = sizeof(glm::mat4x4);
 	uniform_buffer_info.buffer = mvpmtx_uniform_buffer;
 	uniform_buffer_info.offset = 0;
@@ -1277,6 +1279,20 @@ void VulkanRenderer::DestroyTextureSampler(VkSampler* sampler)
 	vkDestroySampler(device, *sampler, nullptr);
 }
 
+void VulkanRenderer::AddLight(PointLight* light)
+{
+	PointLightData lightData;
+	lightData.intensity = light->GetIntensity();
+	lightData.pos = light->GetPosition();
+	lightData.radius = light->GetRadius();
+	light_infos.push_back(lightData);
+}
+
+void VulkanRenderer::ClearLight()
+{
+	light_infos.clear();
+}
+
 void VulkanRenderer::RenderBegin()
 {
 	VkCommandBufferBeginInfo beginInfo = {};
@@ -1365,4 +1381,9 @@ void VulkanRenderer::Flush()
 void VulkanRenderer::WaitIdle()
 {
 	vkDeviceWaitIdle(device);
+}
+
+void VulkanRenderer::OnSceneExit()
+{
+	ClearLight();
 }

@@ -21,6 +21,8 @@ public:
 	virtual void Flush() = 0;
 	virtual void WaitIdle() = 0;
 
+	virtual void OnSceneExit() = 0;
+
 	void SetCamera(Camera* c) { camera = c; }
 	Camera* GetCamera() { return camera; }
 

@@ -66,9 +66,12 @@ void Material::InitWithTinyMat(tinyobj::material_t* mat, std::string& basePath)
 		fullPath = basePath + "/" + mat->specular_highlight_texname;
 		specular_highlight_tex = new Texture(fullPath);
 	}
-	if (mat->bump_texname != "")
+	if (mat->bump_texname != "" || mat->normal_texname != "")	// cryengine use bump as normal texture
 	{
-		fullPath = basePath + "/" + mat->bump_texname;
+		if(mat->normal_texname != "")
+			fullPath = basePath + "/" + mat->normal_texname;
+		if (mat->bump_texname != "")
+			fullPath = basePath + "/" + mat->bump_texname;
 		bump_tex = new Texture(fullPath);
 	}
 	if (mat->displacement_texname != "")

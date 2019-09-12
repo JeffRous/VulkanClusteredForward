@@ -36,8 +36,32 @@ struct Vertex {
 	glm::vec4 normal;
 };
 
+/// transform data for shader
+struct TransformData {
+	glm::mat4x4 mvp;
+	glm::mat4x4 model;
+	glm::mat4x4 view;
+	glm::mat4x4 proj;
+	glm::mat4x4 proj_view;
+	glm::vec3 cam_pos;
+};
+
+/// material flag for shader
+struct MaterialData {
+	int has_albedo_map;
+	int has_normal_map;
+};
+
+/// light structure for shader
+struct PointLightData {
+	glm::vec3 pos;
+	float radius;
+	glm::vec3 intensity;
+};
+
 class Texture;
 class Material;
+class PointLight;
 class VulkanRenderer : public Renderer
 {
 	const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -50,6 +74,8 @@ public:
 	virtual void RenderEnd();
 	virtual void Flush();
 	virtual void WaitIdle();
+
+	virtual void OnSceneExit();
 
 	inline void SetClearColor(VkClearValue c) { clear_color = c; }
 	void SetDefaultTex(std::string& path);
@@ -76,6 +102,18 @@ public:
 
 	void CreateTextureSampler(VkSampler* sampler);
 	void DestroyTextureSampler(VkSampler* sampler);
+
+	void AddLight(PointLight* light);
+	void ClearLight();
+
+	/*
+		Next week
+		Change uniform buffer to hold more matrix	(update uniform data individually)
+		Add uniform buffer to hold light
+		Add uniform buffer for material
+		Add a normal texture sampler
+		Fix the code for forward rendering
+	*/
 
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();
@@ -173,6 +211,8 @@ private:
 	void* uniform_buffer_data;
 	VkDescriptorImageInfo* image_info;
 	Texture* default_tex;
+
+	std::vector<PointLightData> light_infos;
 };
 
 

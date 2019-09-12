@@ -5,6 +5,7 @@
 
 class Camera;
 class TOModel;
+class PointLight;
 class SampleScene : public Scene
 {
 public:
@@ -26,6 +27,8 @@ private:
 
 	TOModel* model;
 	int last_control_state;
+
+	PointLight* light;
 };
 
 #endif // !__SAMPLE_SCENE_H__

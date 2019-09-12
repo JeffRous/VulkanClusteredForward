@@ -187,6 +187,7 @@
     <ClCompile Include="Source\Common\Utils.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\Renderer\Camera.cpp" />
+    <ClCompile Include="Source\Renderer\Light.cpp" />
     <ClCompile Include="Source\Renderer\Material.cpp" />
     <ClCompile Include="Source\Renderer\Texture.cpp" />
     <ClCompile Include="Source\Renderer\TOModel.cpp" />
@@ -198,6 +199,7 @@
     <ClInclude Include="Source\Application\Application.h" />
     <ClInclude Include="Source\Common\Utils.h" />
     <ClInclude Include="Source\Renderer\Camera.h" />
+    <ClInclude Include="Source\Renderer\Light.h" />
     <ClInclude Include="Source\Renderer\Material.h" />
     <ClInclude Include="Source\Renderer\Model.h" />
     <ClInclude Include="Source\Renderer\Renderer.h" />

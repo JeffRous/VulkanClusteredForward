@@ -2,6 +2,7 @@
 #include "Renderer/VRenderer.h"
 #include "Renderer/TOModel.h"
 #include "Renderer/Camera.h"
+#include "Renderer/Light.h"
 #include "SampleScene.h"
 
 SampleScene::SampleScene()
@@ -14,6 +15,12 @@ SampleScene::SampleScene()
 
 SampleScene::~SampleScene()
 {
+	if (model != NULL)
+		delete model;
+
+	if (light != NULL)
+		delete light;
+
 	if( camera != NULL )
 		delete camera;
 }
@@ -27,6 +34,15 @@ bool SampleScene::OnEnter()
 	///glm::vec3 rotate = glm::vec3(-90, 0, 0);
 	///model->SetRotation(rotate);
 	//model->LoadTestData();
+	light = new PointLight();
+	light->SetColor(glm::vec3(1, 1, 1));
+	light->SetIntensity(glm::vec3(1, 1, 1));
+	light->SetPosition(glm::vec3(0, 4000, 0));
+	light->SetRadius(1000000.0f);
+
+	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
+	vRenderer->AddLight(light);
+
 	return true;
 }
 
