@@ -86,6 +86,11 @@ void TOModel::Draw()
 		glm::mat4x4 mvp = (*cam->GetViewProjectMatrix())*(*modelViewMatrix);
 		///glm::vec4 test_p = mvp * glm::vec4(0.0f, -2.5f, -4.9f, 1.0f);	/// vtx output z is 0-1 for(-4.9 and 95)
 		vRenderer->SetMvpMatrix(mvp);
+		vRenderer->SetModelMatrix(*modelViewMatrix);
+		vRenderer->SetViewMatrix(*cam->GetViewMatrix());
+		vRenderer->SetProjMatrix(*cam->GetProjectMatrix());
+		vRenderer->SetProjViewMatrix(*cam->GetViewProjectMatrix());
+		vRenderer->SetCamPos(cam->GetPosition());
 	}
 
 	/// prepare materials

@@ -18,7 +18,7 @@ public:
 	void SetPosition(glm::vec3& p) { position = p; transform_changed = true; }
 	void SetRotation(glm::vec3& r) { rotation = r; transform_changed = true; }
 
-	glm::vec3 GetPosition() { return position; }
+	glm::vec3& GetPosition() { return position; }
 	glm::mat4x4& GetMatrix() { return matrix; }
 
 	virtual glm::mat4x4* UpdateMatrix()

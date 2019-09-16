@@ -1229,6 +1229,36 @@ void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
 	memcpy(&transData->mvp, &mvpMtx, sizeof(glm::mat4x4));
 }
 
+void VulkanRenderer::SetModelMatrix(glm::mat4x4& mtx)
+{
+	TransformData* transData = (TransformData*)transform_uniform_buffer_data;
+	memcpy(&transData->model, &mtx, sizeof(glm::mat4x4));
+}
+
+void VulkanRenderer::SetViewMatrix(glm::mat4x4& mtx)
+{
+	TransformData* transData = (TransformData*)transform_uniform_buffer_data;
+	memcpy(&transData->view, &mtx, sizeof(glm::mat4x4));
+}
+
+void VulkanRenderer::SetProjMatrix(glm::mat4x4& mtx)
+{
+	TransformData* transData = (TransformData*)transform_uniform_buffer_data;
+	memcpy(&transData->proj, &mtx, sizeof(glm::mat4x4));
+}
+
+void VulkanRenderer::SetProjViewMatrix(glm::mat4x4& mtx)
+{
+	TransformData* transData = (TransformData*)transform_uniform_buffer_data;
+	memcpy(&transData->proj_view, &mtx, sizeof(glm::mat4x4));
+}
+
+void VulkanRenderer::SetCamPos(glm::vec3& pos)
+{
+	TransformData* transData = (TransformData*)transform_uniform_buffer_data;
+	memcpy(&transData->cam_pos, &pos, sizeof(glm::vec3));
+}
+
 void VulkanRenderer::SetTexture(Texture* tex)
 {
 	if (tex != NULL)

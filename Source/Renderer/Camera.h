@@ -18,6 +18,8 @@ public:
 
 	virtual glm::mat4x4* UpdateMatrix();
 
+	glm::mat4x4* GetViewMatrix() { return &matrix; }
+	glm::mat4x4* GetProjectMatrix() { return &project_mat; }
 	glm::mat4x4* GetViewProjectMatrix() { return &view_project_mtx; }
 
 	glm::vec3 GetLookAtPosition() { return look_at; }

@@ -93,6 +93,11 @@ public:
 	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 
 	void SetMvpMatrix(glm::mat4x4& mvpMtx);
+	void SetModelMatrix(glm::mat4x4& mtx);
+	void SetViewMatrix(glm::mat4x4& mtx);
+	void SetProjMatrix(glm::mat4x4& mtx);
+	void SetProjViewMatrix(glm::mat4x4& mtx);
+	void SetCamPos(glm::vec3& pos);
 	void SetTexture(Texture* tex);
 	void SetNormalTexture(Texture* tex);
 
