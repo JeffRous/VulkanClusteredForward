@@ -130,8 +130,8 @@ void VulkanRenderer::CleanImage(VkImage& image, VkDeviceMemory& imageMem, VkImag
 
 void VulkanRenderer::CleanUp()
 {
-	vkUnmapMemory(device, mvpmtx_uniform_buffer_memory);
-	CleanBuffer(mvpmtx_uniform_buffer, mvpmtx_uniform_buffer_memory);
+	vkUnmapMemory(device, transform_uniform_buffer_memory);
+	CleanBuffer(transform_uniform_buffer, transform_uniform_buffer_memory);
 
 	vkDestroyImageView(device, depth_image_view, nullptr);
 	vkDestroyImage(device, depth_image, nullptr);
@@ -1138,7 +1138,7 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[0].dstSet = descSets[renderer_frame];
 		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].pBufferInfo = &uniform_buffer_info;
+		descriptorWrites[0].pBufferInfo = &transform_uniform_buffer_info;
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].dstBinding = 0;
 
@@ -1160,7 +1160,8 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 
 void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
 {
-	memcpy(uniform_buffer_data, &mvpMtx, sizeof(glm::mat4x4));
+	TransformData* transData = (TransformData*)transform_uniform_buffer_data;
+	memcpy(&transData->mvp, &mvpMtx, sizeof(glm::mat4x4));
 }
 
 void VulkanRenderer::SetTexture(Texture* tex)
@@ -1173,19 +1174,19 @@ void VulkanRenderer::SetTexture(Texture* tex)
 
 void VulkanRenderer::CreateUniformBuffers()
 {
-	VkDeviceSize bufferSize = sizeof(glm::mat4x4);
-	CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mvpmtx_uniform_buffer, mvpmtx_uniform_buffer_memory);
+	VkDeviceSize bufferSize = sizeof(TransformData);
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, transform_uniform_buffer, transform_uniform_buffer_memory);
 
-	vkMapMemory(device, mvpmtx_uniform_buffer_memory, 0, bufferSize, 0, &uniform_buffer_data);
+	vkMapMemory(device, transform_uniform_buffer_memory, 0, bufferSize, 0, &transform_uniform_buffer_data);
 }
 
 void VulkanRenderer::CreateDescriptorSets()
 {
 	/// mvp in uniform buffer
-	VkDeviceSize bufferSize = sizeof(glm::mat4x4);
-	uniform_buffer_info.buffer = mvpmtx_uniform_buffer;
-	uniform_buffer_info.offset = 0;
-	uniform_buffer_info.range = bufferSize;
+	VkDeviceSize bufferSize = sizeof(TransformData);
+	transform_uniform_buffer_info.buffer = transform_uniform_buffer;
+	transform_uniform_buffer_info.offset = 0;
+	transform_uniform_buffer_info.range = bufferSize;
 }
 
 void VulkanRenderer::CreateDescriptorSetsPool()

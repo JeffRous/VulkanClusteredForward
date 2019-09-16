@@ -162,10 +162,9 @@ private:
 	void CreateCommandBuffers();
 
 	void CreateUniformBuffers();
+	void CreateDescriptorSets();
 
 	void CreateDescriptorSetsPool();
-
-	void CreateDescriptorSets();
 
 	void CreateSemaphores();
 
@@ -205,14 +204,26 @@ private:
 	VkClearValue clear_color;
 	uint32_t active_command_buffer_idx;
 
-	VkBuffer mvpmtx_uniform_buffer;
-	VkDeviceMemory mvpmtx_uniform_buffer_memory;
-	VkDescriptorBufferInfo uniform_buffer_info;
-	void* uniform_buffer_data;
 	VkDescriptorImageInfo* image_info;
 	Texture* default_tex;
 
 	std::vector<PointLightData> light_infos;
+	
+	/// uniform buffers
+	VkBuffer transform_uniform_buffer;
+	VkDeviceMemory transform_uniform_buffer_memory;
+	VkDescriptorBufferInfo transform_uniform_buffer_info;
+	void* transform_uniform_buffer_data;
+
+	VkBuffer material_uniform_buffer;
+	VkDeviceMemory material_uniform_buffer_memory;
+	VkDescriptorBufferInfo material_uniform_buffer_info;
+	void* material_uniform_buffer_data;
+
+	VkBuffer light_uniform_buffer;
+	VkDeviceMemory light_uniform_buffer_memory;
+	VkDescriptorBufferInfo light_uniform_buffer_info;
+	void* light_uniform_buffer_data;
 };
 
 
