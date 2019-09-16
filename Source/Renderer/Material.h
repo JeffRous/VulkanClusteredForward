@@ -21,6 +21,9 @@ public:
 
 	inline Texture* GetAmbientTexture() { return ambient_tex; }
 	inline Texture* GetDiffuseTexture() { return diffuse_tex; }
+	inline Texture* GetNormalTexture() { return bump_tex; }
+
+	inline VkDescriptorBufferInfo* GetBufferInfo() { return &material_uniform_buffer_info; }
 
 private:
 	tinyobj::material_t* tiny_mat;
@@ -36,6 +39,11 @@ private:
 
 	bool desc_sets_updated;
 	VkDescriptorSet desc_sets[2];
+
+	VkBuffer material_uniform_buffer;
+	VkDeviceMemory material_uniform_buffer_memory;
+	VkDescriptorBufferInfo material_uniform_buffer_info;
+	void* material_uniform_buffer_data;
 };
 
 #endif // !__MATERIAL_H__

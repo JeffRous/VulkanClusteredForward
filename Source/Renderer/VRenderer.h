@@ -84,6 +84,8 @@ public:
 	void CreateVertexBuffer( void* vdata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateIndexBuffer(void* idata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateImageBuffer(void* imageData, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
+	void CreateUniformBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
+	void UnmapBufferMemory(VkDeviceMemory& mem);
 	void CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem);
 
 	void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
@@ -92,6 +94,7 @@ public:
 
 	void SetMvpMatrix(glm::mat4x4& mvpMtx);
 	void SetTexture(Texture* tex);
+	void SetNormalTexture(Texture* tex);
 
 	void AllocateDescriptorSets(VkDescriptorSet* descSets);
 	void UpdateMaterial(Material* mat);
@@ -162,7 +165,6 @@ private:
 	void CreateCommandBuffers();
 
 	void CreateUniformBuffers();
-	void CreateDescriptorSets();
 
 	void CreateDescriptorSetsPool();
 
@@ -205,6 +207,7 @@ private:
 	uint32_t active_command_buffer_idx;
 
 	VkDescriptorImageInfo* image_info;
+	VkDescriptorImageInfo* normal_image_info;
 	Texture* default_tex;
 
 	std::vector<PointLightData> light_infos;
@@ -214,11 +217,6 @@ private:
 	VkDeviceMemory transform_uniform_buffer_memory;
 	VkDescriptorBufferInfo transform_uniform_buffer_info;
 	void* transform_uniform_buffer_data;
-
-	VkBuffer material_uniform_buffer;
-	VkDeviceMemory material_uniform_buffer_memory;
-	VkDescriptorBufferInfo material_uniform_buffer_info;
-	void* material_uniform_buffer_data;
 
 	VkBuffer light_uniform_buffer;
 	VkDeviceMemory light_uniform_buffer_memory;

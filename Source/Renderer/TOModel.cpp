@@ -110,6 +110,7 @@ void TOModel::Draw()
 				/// material
 				Material* mat = material_insts[mat_ids[i]];
 				vRenderer->SetTexture(mat->GetDiffuseTexture());
+				vRenderer->SetNormalTexture(mat->GetNormalTexture());
 				vRenderer->UpdateMaterial(mat);
 			}
 			vkCmdBindIndexBuffer(cb, index_buffers[i], 0, VK_INDEX_TYPE_UINT16);
@@ -125,6 +126,7 @@ void TOModel::Draw()
 				/// material
 				Material* mat = material_insts[mat_ids[i]];
 				vRenderer->SetTexture(mat->GetDiffuseTexture());
+				vRenderer->SetNormalTexture(mat->GetNormalTexture());
 				vRenderer->UpdateMaterial(mat);
 			}
 			VkBuffer vertexBuffers[] = { vertex_buffers[i] };

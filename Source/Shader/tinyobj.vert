@@ -17,11 +17,11 @@ layout(location = 3) in vec4 inNormal;
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec3 fragTexCoord;
+layout(location = 2) out vec3 fragNormal;
+layout(location = 3) out vec3 fragNWorldPos;
 
 void main() {
     gl_Position = myTransformVals.mvp * inPosition;
-    //gl_Position.z = 0.5;
-    //gl_Position.w = 1.0;
     fragColor = inColor;
     fragTexCoord = inTexcoord;
 }
