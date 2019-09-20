@@ -231,6 +231,39 @@ bool TOModel::LoadFromPath(std::string path)
 				vertices[j].normal.y = attrib.normals[idx * 3 + 1];
 				vertices[j].normal.z = attrib.normals[idx * 3 + 2];
 				vertices[j].normal.w = 1.0f;
+
+				/// calculate tangent/bitangent
+				if ((j % 3) == 2)
+				{
+					glm::vec4 & v0 = vertices[j - 2].pos;
+					glm::vec4 & v1 = vertices[j - 1].pos;
+					glm::vec4 & v2 = vertices[j].pos;
+
+					// Shortcuts for UVs
+					glm::vec3 & uv0 = vertices[j - 2].texcoord;
+					glm::vec3 & uv1 = vertices[j - 1].texcoord;
+					glm::vec3 & uv2 = vertices[j].texcoord;
+
+					// Edges of the triangle : position delta
+					glm::vec3 deltaPos1 = v1 - v0;
+					glm::vec3 deltaPos2 = v2 - v0;
+
+					// UV delta
+					glm::vec2 deltaUV1 = uv1 - uv0;
+					glm::vec2 deltaUV2 = uv2 - uv0;
+
+					float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+					glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y)*r;
+					glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x)*r;
+
+					vertices[j - 2].tangent = tangent;
+					vertices[j - 1].tangent = tangent;
+					vertices[j].tangent = tangent;
+
+					vertices[j - 2].bitangent = bitangent;
+					vertices[j - 1].bitangent = bitangent;
+					vertices[j].bitangent = bitangent;
+				}
 			}
 			vRenderer->CreateVertexBuffer((void*)vertices, sizeof(Vertex), vtxNum, vertex_buffer, vertex_buffer_memory);
 			vertex_buffers.push_back(vertex_buffer);

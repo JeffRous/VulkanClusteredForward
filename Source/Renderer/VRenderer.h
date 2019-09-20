@@ -34,6 +34,8 @@ struct Vertex {
 	glm::vec3 color;
 	glm::vec3 texcoord;
 	glm::vec4 normal;
+	glm::vec3 tangent;
+	glm::vec3 bitangent;
 };
 
 /// transform data for shader
@@ -125,7 +127,7 @@ public:
 
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();
-	std::array<VkVertexInputAttributeDescription, 4> GetAttributeDescriptions();
+	std::array<VkVertexInputAttributeDescription, 6> GetAttributeDescriptions();
 
 	void CreateInstance();
 	bool CheckValidationLayerSupport();
