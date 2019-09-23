@@ -230,7 +230,6 @@ bool TOModel::LoadFromPath(std::string path)
 				vertices[j].normal.x = attrib.normals[idx * 3 + 0];
 				vertices[j].normal.y = attrib.normals[idx * 3 + 1];
 				vertices[j].normal.z = attrib.normals[idx * 3 + 2];
-				vertices[j].normal.w = 1.0f;
 
 				/// calculate tangent/bitangent
 				if ((j % 3) == 2)
@@ -253,8 +252,8 @@ bool TOModel::LoadFromPath(std::string path)
 					glm::vec2 deltaUV2 = uv2 - uv0;
 
 					float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-					glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y)*r;
-					glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x)*r;
+					glm::vec3 tangent = glm::normalize((deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y)*r);
+					glm::vec3 bitangent = glm::normalize((deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x)*r);
 
 					vertices[j - 2].tangent = tangent;
 					vertices[j - 1].tangent = tangent;

@@ -33,7 +33,7 @@ struct Vertex {
 	glm::vec4 pos;
 	glm::vec3 color;
 	glm::vec3 texcoord;
-	glm::vec4 normal;
+	glm::vec3 normal;
 	glm::vec3 tangent;
 	glm::vec3 bitangent;
 };

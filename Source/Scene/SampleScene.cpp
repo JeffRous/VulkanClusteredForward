@@ -31,7 +31,7 @@ bool SampleScene::OnEnter()
 	light = new PointLight();
 	light->SetColor(glm::vec3(1, 1, 1));
 	light->SetIntensity(glm::vec3(1, 1, 1));
-	light->SetPosition(glm::vec3(0, 4000, 0));
+	light->SetPosition(glm::vec3(0, 100, 0));
 	light->SetRadius(1000000.0f);
 
 	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();

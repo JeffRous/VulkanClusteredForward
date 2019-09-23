@@ -688,7 +688,7 @@ std::array<VkVertexInputAttributeDescription, 6> VulkanRenderer::GetAttributeDes
 
 	attributeDescriptions[3].binding = 0;
 	attributeDescriptions[3].location = 3;
-	attributeDescriptions[3].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
 	attributeDescriptions[3].offset = offsetof(Vertex, normal);
 
 	attributeDescriptions[4].binding = 0;
@@ -839,14 +839,14 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	layoutBinding1.binding = 1;
 	layoutBinding1.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	layoutBinding1.descriptorCount = 1;
-	layoutBinding1.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	layoutBinding1.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 	layoutBinding1.pImmutableSamplers = NULL;
 
 	VkDescriptorSetLayoutBinding layoutBinding2 = {};
 	layoutBinding2.binding = 2;
 	layoutBinding2.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	layoutBinding2.descriptorCount = 1;
-	layoutBinding2.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	layoutBinding2.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 	layoutBinding2.pImmutableSamplers = NULL;
 
 	/// sampler layout
