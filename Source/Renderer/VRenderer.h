@@ -58,7 +58,13 @@ struct MaterialData {
 struct PointLightData {
 	glm::vec3 pos;
 	float radius;
-	glm::vec3 intensity;
+	glm::vec3 color;
+	float ambient_intensity;
+	float diffuse_intensity;
+	float specular_intensity;
+	float attenuation_constant;
+	float attenuation_linear;
+	float attenuation_exp;
 };
 
 class Texture;

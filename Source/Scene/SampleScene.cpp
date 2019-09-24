@@ -30,9 +30,14 @@ bool SampleScene::OnEnter()
 	//model->LoadTestData();
 	light = new PointLight();
 	light->SetColor(glm::vec3(1, 1, 1));
-	light->SetIntensity(glm::vec3(1, 1, 1));
 	light->SetPosition(glm::vec3(0, 100, 0));
 	light->SetRadius(1000000.0f);
+	light->SetAmbientIntensity(0.1f);
+	light->SetDiffuseIntensity(1.0f);
+	light->SetSpecularIntensity(0.2f);
+	light->SetAttenuationConstant(1.0f);
+	light->SetAttenuationLinear(0);
+	light->SetAttenuationExp(0);
 
 	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
 	vRenderer->AddLight(light);

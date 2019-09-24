@@ -20,7 +20,13 @@ layout(std140, binding = 2) uniform PointLightData
 {
     vec3 pos;
 	float radius;
-	vec3 intensity;
+	vec3 color;
+    float ambient_intensity;
+	float diffuse_intensity;
+	float specular_intensity;
+    float attenuation_constant;
+	float attenuation_linear;
+	float attenuation_exp;
 } pointLight;
 
 layout(location = 0) in vec4 inPosition;

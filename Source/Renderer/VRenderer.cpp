@@ -1401,9 +1401,15 @@ void VulkanRenderer::DestroyTextureSampler(VkSampler* sampler)
 void VulkanRenderer::AddLight(PointLight* light)
 {
 	PointLightData lightData;
-	lightData.intensity = light->GetIntensity();
+	lightData.color = light->GetColor();
 	lightData.pos = light->GetPosition();
 	lightData.radius = light->GetRadius();
+	lightData.ambient_intensity = light->GetAmbientIntensity();
+	lightData.diffuse_intensity = light->GetDiffuseIntensity();
+	lightData.specular_intensity = light->GetSpecularIntensity();
+	lightData.attenuation_constant = light->GetAttenuationConstant();
+	lightData.attenuation_linear = light->GetAttenuationLinear();
+	lightData.attenuation_exp = light->GetAttenuationExp();
 	light_infos.push_back(lightData);
 
 	memcpy(light_uniform_buffer_data, &light_infos[0], sizeof(PointLightData));
