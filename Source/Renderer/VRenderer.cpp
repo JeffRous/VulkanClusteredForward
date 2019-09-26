@@ -134,8 +134,11 @@ void VulkanRenderer::CleanImage(VkImage& image, VkDeviceMemory& imageMem, VkImag
 
 void VulkanRenderer::CleanUp()
 {
-	UnmapBufferMemory(light_uniform_buffer_memory);
-	CleanBuffer(light_uniform_buffer, light_uniform_buffer_memory);
+	for (int i = 0; i < light_uniform_buffers.size(); i++)
+	{
+		UnmapBufferMemory(light_uniform_buffer_memorys[i]);
+		CleanBuffer(light_uniform_buffers[i], light_uniform_buffer_memorys[i]);
+	}
 
 	UnmapBufferMemory(transform_uniform_buffer_memory);
 	CleanBuffer(transform_uniform_buffer, transform_uniform_buffer_memory);
@@ -845,7 +848,7 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	VkDescriptorSetLayoutBinding layoutBinding2 = {};
 	layoutBinding2.binding = 2;
 	layoutBinding2.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	layoutBinding2.descriptorCount = 1;
+	layoutBinding2.descriptorCount = MAX_LIGHT_NUM;
 	layoutBinding2.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 	layoutBinding2.pImmutableSamplers = NULL;
 
@@ -1203,9 +1206,9 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[2].pNext = NULL;
 		descriptorWrites[2].dstSet = descSets[renderer_frame];
-		descriptorWrites[2].descriptorCount = 1;
+		descriptorWrites[2].descriptorCount = light_uniform_buffer_infos.size();
 		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[2].pBufferInfo = &light_uniform_buffer_info;
+		descriptorWrites[2].pBufferInfo = light_uniform_buffer_infos.data();
 		descriptorWrites[2].dstArrayElement = 0;
 		descriptorWrites[2].dstBinding = 2;
 
@@ -1294,11 +1297,24 @@ void VulkanRenderer::CreateUniformBuffers()
 	transform_uniform_buffer_info.offset = 0;
 	transform_uniform_buffer_info.range = bufferSize;
 
-	bufferSize = sizeof(PointLightData);
-	CreateUniformBuffer(&light_uniform_buffer_data, (uint32_t)bufferSize, light_uniform_buffer, light_uniform_buffer_memory);
-	light_uniform_buffer_info.buffer = light_uniform_buffer;
-	light_uniform_buffer_info.offset = 0;
-	light_uniform_buffer_info.range = bufferSize;
+	for (int i = 0; i < MAX_LIGHT_NUM; i++)
+	{
+		void* light_uniform_buffer_data;
+		VkBuffer light_uniform_buffer;
+		VkDeviceMemory light_uniform_buffer_memory;
+		VkDescriptorBufferInfo light_uniform_buffer_info;
+
+		bufferSize = sizeof(PointLightData);
+		CreateUniformBuffer(&light_uniform_buffer_data, (uint32_t)bufferSize, light_uniform_buffer, light_uniform_buffer_memory);
+		light_uniform_buffer_info.buffer = light_uniform_buffer;
+		light_uniform_buffer_info.offset = 0;
+		light_uniform_buffer_info.range = bufferSize;
+
+		light_uniform_buffer_datas.push_back(light_uniform_buffer_data);
+		light_uniform_buffers.push_back(light_uniform_buffer);
+		light_uniform_buffer_memorys.push_back(light_uniform_buffer_memory);
+		light_uniform_buffer_infos.push_back(light_uniform_buffer_info);
+	}
 }
 
 void VulkanRenderer::CreateDescriptorSetsPool()
@@ -1309,7 +1325,7 @@ void VulkanRenderer::CreateDescriptorSetsPool()
 	typeCounts[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	typeCounts[1].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
 	typeCounts[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	typeCounts[2].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
+	typeCounts[2].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM * MAX_LIGHT_NUM;
 	typeCounts[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	typeCounts[3].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
 	typeCounts[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1412,7 +1428,8 @@ void VulkanRenderer::AddLight(PointLight* light)
 	lightData.attenuation_exp = light->GetAttenuationExp();
 	light_infos.push_back(lightData);
 
-	memcpy(light_uniform_buffer_data, &light_infos[0], sizeof(PointLightData));
+	int idx = light_infos.size() - 1;
+	memcpy(light_uniform_buffer_datas[idx], &lightData, sizeof(PointLightData));
 }
 
 void VulkanRenderer::ClearLight()

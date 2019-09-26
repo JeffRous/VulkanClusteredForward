@@ -27,7 +27,7 @@ layout(std140, binding = 2) uniform PointLightData
     float attenuation_constant;
 	float attenuation_linear;
 	float attenuation_exp;
-} pointLight;
+} pointLight[16];
 
 layout(location = 0) in vec4 inPosition;
 layout(location = 1) in vec3 inColor;
@@ -39,9 +39,9 @@ layout(location = 5) in vec3 inBitangent;
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec3 fragTexCoord;
 layout(location = 2) out vec3 fragPos;
-layout(location = 3) out vec3 tanLightPos;
-layout(location = 4) out vec3 tanViewPos;
-layout(location = 5) out vec3 tanFragPos;
+layout(location = 3) out vec3 tanViewPos;
+layout(location = 4) out vec3 tanFragPos;
+layout(location = 5) out vec3 tanLightPos[16];
 
 void main() {
     gl_Position = transform.mvp * inPosition;
@@ -56,7 +56,8 @@ void main() {
     vec3 B = cross(N, T);
     mat3 TBN = mat3(T, B, N);
     TBN = transpose(TBN);
-    tanLightPos = TBN * pointLight.pos;
+    for(int i = 0; i < 16; i++)
+        tanLightPos[i] = TBN * pointLight[i].pos;
     tanViewPos  = TBN * transform.cam_pos;
     tanFragPos  = TBN * fragPos;
 }

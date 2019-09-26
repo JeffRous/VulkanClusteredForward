@@ -11,6 +11,7 @@
 #include <conio.h>
 
 #include "Application/Application.h"
+#include "Renderer/VRenderer.h"
 #include "Scene/SampleScene.h"
 
 int main() {

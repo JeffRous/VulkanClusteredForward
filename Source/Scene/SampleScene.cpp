@@ -28,19 +28,26 @@ bool SampleScene::OnEnter()
 	///glm::vec3 rotate = glm::vec3(-90, 0, 0);
 	///model->SetRotation(rotate);
 	//model->LoadTestData();
-	light = new PointLight();
-	light->SetColor(glm::vec3(1, 1, 1));
-	light->SetPosition(glm::vec3(0, 100, 0));
-	light->SetRadius(1000000.0f);
-	light->SetAmbientIntensity(0.1f);
-	light->SetDiffuseIntensity(1.0f);
-	light->SetSpecularIntensity(0.2f);
-	light->SetAttenuationConstant(1.0f);
-	light->SetAttenuationLinear(0);
-	light->SetAttenuationExp(0);
-
 	VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
-	vRenderer->AddLight(light);
+	for (int i = 0; i < MAX_LIGHT_NUM; i++)
+	{
+		int y = i % 2;
+		int left = i / 2;
+		int z = left % 2;
+		int x = left / 2;
+
+		light[i] = new PointLight();
+		light[i]->SetPosition(glm::vec3(-1200 + 800 * x, 100 + 400 * y, -250 + 500 * z));
+		light[i]->SetColor(glm::vec3(1, 1, 1));
+		light[i]->SetRadius(1000.0f);
+		light[i]->SetAmbientIntensity(0.1f);
+		light[i]->SetDiffuseIntensity(1.0f);
+		light[i]->SetSpecularIntensity(0.2f);
+		light[i]->SetAttenuationConstant(1.0f);
+		light[i]->SetAttenuationLinear(0);
+		light[i]->SetAttenuationExp(0.00001);
+		vRenderer->AddLight(light[i]);
+	}
 
 	return true;
 }
@@ -120,6 +127,9 @@ void SampleScene::OnExit()
 		delete model;
 	}
 
-	if (light != NULL)
-		delete light;
+	for (int i = 0; i < MAX_LIGHT_NUM; i++)
+	{
+		if (light[i] != NULL)
+			delete light[i];
+	}
 }

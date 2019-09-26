@@ -28,7 +28,7 @@ private:
 	TOModel* model;
 	int last_control_state;
 
-	PointLight* light;
+	PointLight* light[MAX_LIGHT_NUM];
 };
 
 #endif // !__SAMPLE_SCENE_H__

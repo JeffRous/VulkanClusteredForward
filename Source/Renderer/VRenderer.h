@@ -13,6 +13,8 @@
 
 #include "Renderer.h"
 
+#define MAX_LIGHT_NUM 16
+
 struct SwapChainSupportDetails {
 	VkSurfaceCapabilitiesKHR capabilities;
 	std::vector<VkSurfaceFormatKHR> formats;
@@ -231,10 +233,10 @@ private:
 	VkDescriptorBufferInfo transform_uniform_buffer_info;
 	void* transform_uniform_buffer_data;
 
-	VkBuffer light_uniform_buffer;
-	VkDeviceMemory light_uniform_buffer_memory;
-	VkDescriptorBufferInfo light_uniform_buffer_info;
-	void* light_uniform_buffer_data;
+	std::vector<VkBuffer> light_uniform_buffers;
+	std::vector<VkDeviceMemory> light_uniform_buffer_memorys;
+	std::vector<VkDescriptorBufferInfo> light_uniform_buffer_infos;
+	std::vector<void*> light_uniform_buffer_datas;
 };
 
 
