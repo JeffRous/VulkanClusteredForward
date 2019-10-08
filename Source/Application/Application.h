@@ -57,6 +57,8 @@ private:
 	void SceneUpdate(float dt);
 	void SceneRender();
 
+	void showFPS(GLFWwindow *pWindow);
+
 private:
 	Scene* current_scene;
 	bool update_scene;
@@ -65,6 +67,9 @@ private:
 
 	float delta_time;
 	uint64_t last_time;
+
+	double last_fps_time;
+	int nb_frames;
 
 	Renderer* renderer;
 

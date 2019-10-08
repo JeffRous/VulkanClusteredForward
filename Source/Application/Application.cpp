@@ -1,4 +1,6 @@
 #include <time.h>
+#include <stdio.h>
+#include <string>
 
 #include "Application.h"
 #include "Scene/Scene.h"
@@ -122,12 +124,33 @@ void Application::SetRendererCamera(Camera* cam)
 	renderer->SetCamera(cam);
 }
 
+void Application::showFPS(GLFWwindow *pWindow)
+{
+	// Measure speed
+	double currentTime = glfwGetTime();
+	double delta = currentTime - last_fps_time;
+	nb_frames++;
+	if (delta >= 2.0) { // If last cout was more than 1 sec ago
+		double fps = double(nb_frames) / delta;
+
+		char title[256];
+		title[255] = '\0';
+		snprintf(title, 255, "[FPS: %3.2f]", fps);
+		glfwSetWindowTitle(pWindow, title);
+		nb_frames = 0;
+		last_fps_time = currentTime;
+	}
+}
+
 bool Application::MainLoop()
 {
 	/// time offset
 	uint64_t nowTime = Utils::GetMS();
 	delta_time = (float)(nowTime - last_time) / 1000.0f;
 	last_time = nowTime;
+
+	/// show fps
+	showFPS(current_window);
 
 	/// logic
 	SceneUpdate(delta_time);
