@@ -1,6 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
-
+#define MAX_LIGHT_NUM 3
 layout (std140, binding = 0) uniform TransformData {
     mat4 mvp;
     mat4 model;
@@ -27,7 +27,7 @@ layout(std140, binding = 2) uniform PointLightData
     float attenuation_constant;
 	float attenuation_linear;
 	float attenuation_exp;
-} pointLight[16];
+} pointLight[MAX_LIGHT_NUM];
 
 layout(binding = 3) uniform sampler2D albedoSampler;
 layout(binding = 4) uniform sampler2D normalSampler;
@@ -43,7 +43,7 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     outColor = vec4(0,0,0,1);
-    for(int i = 0; i < 16; i++)
+    for(int i = 0; i < MAX_LIGHT_NUM; i++)
     {
         // diffuse
         vec3 albedo;

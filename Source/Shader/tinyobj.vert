@@ -1,6 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
-
+#define MAX_LIGHT_NUM 3
 layout (std140, binding = 0) uniform TransformData {
     mat4 mvp;
     mat4 model;
@@ -27,7 +27,7 @@ layout(std140, binding = 2) uniform PointLightData
     float attenuation_constant;
 	float attenuation_linear;
 	float attenuation_exp;
-} pointLight[16];
+} pointLight[MAX_LIGHT_NUM];
 
 layout(location = 0) in vec4 inPosition;
 layout(location = 1) in vec3 inColor;
@@ -56,7 +56,7 @@ void main() {
     vec3 B = cross(N, T);
     mat3 TBN = mat3(T, B, N);
     TBN = transpose(TBN);
-    for(int i = 0; i < 16; i++)
+    for(int i = 0; i < MAX_LIGHT_NUM; i++)
         tanLightPos[i] = TBN * pointLight[i].pos;
     tanViewPos  = TBN * transform.cam_pos;
     tanFragPos  = TBN * fragPos;

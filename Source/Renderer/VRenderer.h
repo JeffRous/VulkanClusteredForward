@@ -13,7 +13,7 @@
 
 #include "Renderer.h"
 
-#define MAX_LIGHT_NUM 16
+#define MAX_LIGHT_NUM 3
 
 struct SwapChainSupportDetails {
 	VkSurfaceCapabilitiesKHR capabilities;
