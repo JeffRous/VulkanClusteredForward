@@ -32,6 +32,7 @@ const std::vector<const char*> deviceExtensions = {
 VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	:Renderer(win)
 {
+	present_frame = renderer_frame = 0;
 	CreateInstance();
 	CreateSurface();
 	PickPhysicalDevice();
@@ -49,8 +50,8 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateSemaphores();
 
 	clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
-	renderer_frame = 0;
-	present_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;;
+	renderer_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+	last_command_buffer_idx = UINT32_MAX;
 	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[renderer_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
 	default_tex = NULL;
 }
@@ -1344,7 +1345,7 @@ void VulkanRenderer::CreateDescriptorSetsPool()
 
 void VulkanRenderer::AllocateDescriptorSets(VkDescriptorSet* descSets)
 {
-	VkDescriptorSetLayout desc_layouts[2] = { desc_layout, desc_layout };
+	VkDescriptorSetLayout desc_layouts[3] = { desc_layout, desc_layout, desc_layout };
 	VkDescriptorSetAllocateInfo allocInfo[1];
 	allocInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo[0].pNext = NULL;
@@ -1380,8 +1381,9 @@ void VulkanRenderer::CreateSemaphores()
 
 			throw std::runtime_error("failed to create semaphores!");
 		}
+
+		vkResetFences(device, 1, &in_flight_fences[i]);
 	}
-	vkResetFences(device, 1, &in_flight_fences[renderer_frame]);	/// prevent warning
 }
 
 void VulkanRenderer::CreateTextureSampler(VkSampler* sampler)
@@ -1482,8 +1484,27 @@ void VulkanRenderer::RenderEnd()
 
 void VulkanRenderer::Flush()
 {
-	vkWaitForFences(device, 1, &in_flight_fences[present_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-	vkResetFences(device, 1, &in_flight_fences[present_frame]);
+	if (last_command_buffer_idx != UINT32_MAX)
+	{
+		vkWaitForFences(device, 1, &in_flight_fences[present_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+		vkResetFences(device, 1, &in_flight_fences[present_frame]);
+
+		VkSemaphore waitRenderSemaphores[] = { render_finished_semaphores[present_frame] };
+
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = waitRenderSemaphores;
+
+		VkSwapchainKHR swapChains[] = { swap_chain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &last_command_buffer_idx;
+		presentInfo.pResults = nullptr; // Optional
+
+		vkQueuePresentKHR(graphics_queue, &presentInfo);
+	}
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1502,22 +1523,9 @@ void VulkanRenderer::Flush()
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
-	VkPresentInfoKHR presentInfo = {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = signalSemaphores;
-
-	VkSwapchainKHR swapChains[] = { swap_chain };
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &active_command_buffer_idx;
-	presentInfo.pResults = nullptr; // Optional
-
-	vkQueuePresentKHR(graphics_queue, &presentInfo);
-
+	present_frame = renderer_frame;
 	renderer_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;
-	present_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+	last_command_buffer_idx = active_command_buffer_idx;
 
 	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[renderer_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
 }

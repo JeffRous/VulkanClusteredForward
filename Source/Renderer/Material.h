@@ -38,7 +38,7 @@ private:
 	Texture* reflection_tex;
 
 	bool desc_sets_updated;
-	VkDescriptorSet desc_sets[2];
+	VkDescriptorSet desc_sets[3];
 
 	VkBuffer material_uniform_buffer;
 	VkDeviceMemory material_uniform_buffer_memory;
