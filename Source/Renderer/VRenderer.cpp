@@ -330,10 +330,11 @@ void VulkanRenderer::CreateSurface()
 	if (vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create window surface!");
 	}
-#endif
+#else
 	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create window surface!");
 	}
+#endif
 }
 
 void VulkanRenderer::CreateLogicDevice()
@@ -1503,7 +1504,10 @@ void VulkanRenderer::Flush()
 		presentInfo.pImageIndices = &last_command_buffer_idx;
 		presentInfo.pResults = nullptr; // Optional
 
-		vkQueuePresentKHR(graphics_queue, &presentInfo);
+		if (vkQueuePresentKHR(graphics_queue, &presentInfo) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to present frame buffer!");
+		}
 	}
 
 	VkSubmitInfo submitInfo = {};
