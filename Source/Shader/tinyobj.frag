@@ -1,6 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
-#define MAX_LIGHT_NUM 3
+#define MAX_LIGHT_NUM 16
 layout (std140, binding = 0) uniform TransformData {
     mat4 mvp;
     mat4 model;

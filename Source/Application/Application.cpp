@@ -130,7 +130,7 @@ void Application::showFPS(GLFWwindow *pWindow)
 	double currentTime = glfwGetTime();
 	double delta = currentTime - last_fps_time;
 	nb_frames++;
-	if (delta >= 2.0) { // If last cout was more than 1 sec ago
+	if (delta >= 1.0) { // If last cout was more than 1 sec ago
 		double fps = double(nb_frames) / delta;
 
 		char title[256];
