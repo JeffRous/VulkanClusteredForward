@@ -1485,12 +1485,31 @@ void VulkanRenderer::RenderEnd()
 
 void VulkanRenderer::Flush()
 {
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	VkSemaphore waitSemaphores[] = { image_available_semaphores[renderer_frame] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &command_buffers[active_command_buffer_idx];
+	VkSemaphore signalSemaphores[] = { render_finished_semaphores[renderer_frame] };
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fences[renderer_frame]) != VK_SUCCESS) {
+		throw std::runtime_error("failed to submit draw command buffer!");
+	}
+
+	last_command_buffer_idx = active_command_buffer_idx;
+
 	if (last_command_buffer_idx != UINT32_MAX)
 	{
-		vkWaitForFences(device, 1, &in_flight_fences[present_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-		vkResetFences(device, 1, &in_flight_fences[present_frame]);
+		vkWaitForFences(device, 1, &in_flight_fences[renderer_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+		vkResetFences(device, 1, &in_flight_fences[renderer_frame]);
 
-		VkSemaphore waitRenderSemaphores[] = { render_finished_semaphores[present_frame] };
+		VkSemaphore waitRenderSemaphores[] = { render_finished_semaphores[renderer_frame] };
 
 		VkPresentInfoKHR presentInfo = {};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1510,26 +1529,9 @@ void VulkanRenderer::Flush()
 		}
 	}
 
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	VkSemaphore waitSemaphores[] = { image_available_semaphores[renderer_frame] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = waitSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &command_buffers[active_command_buffer_idx];
-	VkSemaphore signalSemaphores[] = { render_finished_semaphores[renderer_frame] };
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = signalSemaphores;
-
-	if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fences[renderer_frame]) != VK_SUCCESS) {
-		throw std::runtime_error("failed to submit draw command buffer!");
-	}
-
 	present_frame = renderer_frame;
 	renderer_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;
-	last_command_buffer_idx = active_command_buffer_idx;
+	///last_command_buffer_idx = active_command_buffer_idx;
 
 	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[renderer_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
 }
