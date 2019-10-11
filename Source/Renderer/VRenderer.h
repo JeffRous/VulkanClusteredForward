@@ -74,7 +74,7 @@ class Material;
 class PointLight;
 class VulkanRenderer : public Renderer
 {
-	const int MAX_FRAMES_IN_FLIGHT = 3;
+	const int MAX_FRAMES_IN_FLIGHT = 1;
 	const int MAX_MATERIAL_NUM = 50;
 public:
 	VulkanRenderer(GLFWwindow* win);
@@ -215,8 +215,8 @@ private:
 	VkDeviceMemory depth_image_memory;
 	VkImageView depth_image_view;
 
-	size_t renderer_frame;
-	size_t present_frame;
+	size_t current_frame;
+	size_t last_frame;
 
 	VkClearValue clear_color;
 	uint32_t active_command_buffer_idx;

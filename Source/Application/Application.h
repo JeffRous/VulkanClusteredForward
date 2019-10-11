@@ -53,9 +53,10 @@ public:
 	glm::vec2 GetMoveOffset() { return move_offset; }
 	void SetMoveOffset(glm::vec2 offset) { move_offset = offset; }
 
+	void SceneRender();
+
 private:
 	void SceneUpdate(float dt);
-	void SceneRender();
 
 	void showFPS(GLFWwindow *pWindow);
 

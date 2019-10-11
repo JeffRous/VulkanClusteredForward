@@ -32,7 +32,8 @@ const std::vector<const char*> deviceExtensions = {
 VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	:Renderer(win)
 {
-	present_frame = renderer_frame = 0;
+	current_frame = 0;
+	last_frame = UINT_MAX;
 	CreateInstance();
 	CreateSurface();
 	PickPhysicalDevice();
@@ -50,9 +51,6 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateSemaphores();
 
 	clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
-	renderer_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;
-	last_command_buffer_idx = UINT32_MAX;
-	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[renderer_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
 	default_tex = NULL;
 }
 
@@ -1187,7 +1185,7 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[0] = {};
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[0].pNext = NULL;
-		descriptorWrites[0].dstSet = descSets[renderer_frame];
+		descriptorWrites[0].dstSet = descSets[active_command_buffer_idx];
 		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].pBufferInfo = &transform_uniform_buffer_info;
@@ -1197,7 +1195,7 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[1] = {};
 		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[1].pNext = NULL;
-		descriptorWrites[1].dstSet = descSets[renderer_frame];
+		descriptorWrites[1].dstSet = descSets[active_command_buffer_idx];
 		descriptorWrites[1].descriptorCount = 1;
 		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[1].pBufferInfo = mat->GetBufferInfo();
@@ -1207,7 +1205,7 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[2] = {};
 		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[2].pNext = NULL;
-		descriptorWrites[2].dstSet = descSets[renderer_frame];
+		descriptorWrites[2].dstSet = descSets[active_command_buffer_idx];
 		descriptorWrites[2].descriptorCount = light_uniform_buffer_infos.size();
 		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[2].pBufferInfo = light_uniform_buffer_infos.data();
@@ -1215,7 +1213,7 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[2].dstBinding = 2;
 
 		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[3].dstSet = descSets[renderer_frame];
+		descriptorWrites[3].dstSet = descSets[active_command_buffer_idx];
 		descriptorWrites[3].dstBinding = 3;
 		descriptorWrites[3].dstArrayElement = 0;
 		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1223,7 +1221,7 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[3].pImageInfo = image_info;
 
 		descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[4].dstSet = descSets[renderer_frame];
+		descriptorWrites[4].dstSet = descSets[active_command_buffer_idx];
 		descriptorWrites[4].dstBinding = 4;
 		descriptorWrites[4].dstArrayElement = 0;
 		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1235,7 +1233,7 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		mat->SetDescUpdated();
 	}
 
-	vkCmdBindDescriptorSets(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descSets[renderer_frame], 0, nullptr);
+	vkCmdBindDescriptorSets(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descSets[active_command_buffer_idx], 0, nullptr);
 }
 
 void VulkanRenderer::SetMvpMatrix(glm::mat4x4& mvpMtx)
@@ -1323,20 +1321,20 @@ void VulkanRenderer::CreateDescriptorSetsPool()
 {
 	std::array<VkDescriptorPoolSize, 5> typeCounts = {};
 	typeCounts[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	typeCounts[0].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
+	typeCounts[0].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
 	typeCounts[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	typeCounts[1].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
+	typeCounts[1].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
 	typeCounts[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	typeCounts[2].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM * MAX_LIGHT_NUM;
+	typeCounts[2].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM * MAX_LIGHT_NUM;
 	typeCounts[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	typeCounts[3].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
+	typeCounts[3].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
 	typeCounts[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	typeCounts[4].descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
+	typeCounts[4].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
 
 	VkDescriptorPoolCreateInfo descriptorPool = {};
 	descriptorPool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	descriptorPool.pNext = NULL;
-	descriptorPool.maxSets = MAX_FRAMES_IN_FLIGHT * MAX_MATERIAL_NUM;
+	descriptorPool.maxSets = swap_chain_images.size() * MAX_MATERIAL_NUM;
 	descriptorPool.poolSizeCount = static_cast<uint32_t>(typeCounts.size());
 	descriptorPool.pPoolSizes = typeCounts.data();
 	descriptorPool.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -1351,14 +1349,14 @@ void VulkanRenderer::AllocateDescriptorSets(VkDescriptorSet* descSets)
 	allocInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo[0].pNext = NULL;
 	allocInfo[0].descriptorPool = desc_pool;
-	allocInfo[0].descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
+	allocInfo[0].descriptorSetCount = swap_chain_images.size();
 	allocInfo[0].pSetLayouts = desc_layouts;
 	vkAllocateDescriptorSets(device, allocInfo, descSets);
 }
 
 void VulkanRenderer::FreeDescriptorSets(VkDescriptorSet* descSets)
 {
-	vkFreeDescriptorSets(device, desc_pool, MAX_FRAMES_IN_FLIGHT, descSets);
+	vkFreeDescriptorSets(device, desc_pool, swap_chain_images.size(), descSets);
 }
 
 void VulkanRenderer::CreateSemaphores()
@@ -1382,7 +1380,6 @@ void VulkanRenderer::CreateSemaphores()
 
 			throw std::runtime_error("failed to create semaphores!");
 		}
-
 		vkResetFences(device, 1, &in_flight_fences[i]);
 	}
 }
@@ -1485,55 +1482,52 @@ void VulkanRenderer::RenderEnd()
 
 void VulkanRenderer::Flush()
 {
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	VkSemaphore waitSemaphores[] = { image_available_semaphores[renderer_frame] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = waitSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &command_buffers[active_command_buffer_idx];
-	VkSemaphore signalSemaphores[] = { render_finished_semaphores[renderer_frame] };
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = signalSemaphores;
-
-	if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fences[renderer_frame]) != VK_SUCCESS) {
-		throw std::runtime_error("failed to submit draw command buffer!");
-	}
-
-	last_command_buffer_idx = active_command_buffer_idx;
-
-	if (last_command_buffer_idx != UINT32_MAX)
+	if (last_frame != UINT_MAX)
 	{
-		vkWaitForFences(device, 1, &in_flight_fences[renderer_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-		vkResetFences(device, 1, &in_flight_fences[renderer_frame]);
-
-		VkSemaphore waitRenderSemaphores[] = { render_finished_semaphores[renderer_frame] };
-
+		vkWaitForFences(device, 1, &in_flight_fences[last_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+		vkResetFences(device, 1, &in_flight_fences[last_frame]);
+	
+		VkSemaphore waitSemaphores[] = { render_finished_semaphores[last_frame] };
+		
 		VkPresentInfoKHR presentInfo = {};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = waitRenderSemaphores;
-
+		presentInfo.pWaitSemaphores = waitSemaphores;
 		VkSwapchainKHR swapChains[] = { swap_chain };
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapChains;
 		presentInfo.pImageIndices = &last_command_buffer_idx;
 		presentInfo.pResults = nullptr; // Optional
-
 		if (vkQueuePresentKHR(graphics_queue, &presentInfo) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to present frame buffer!");
 		}
 	}
 
-	present_frame = renderer_frame;
-	renderer_frame = (renderer_frame + 1) % MAX_FRAMES_IN_FLIGHT;
-	///last_command_buffer_idx = active_command_buffer_idx;
+	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[current_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
 
-	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[renderer_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
+	Application::Inst()->SceneRender();
+
+	VkSemaphore signalSemaphores[] = { render_finished_semaphores[current_frame] };
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	VkSemaphore waitSemaphores[] = { image_available_semaphores[current_frame] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &command_buffers[active_command_buffer_idx];
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fences[current_frame]) != VK_SUCCESS) {
+		throw std::runtime_error("failed to submit draw command buffer!");
+	}
+
+	last_command_buffer_idx = active_command_buffer_idx;
+	last_frame = current_frame;
+	current_frame = (current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void VulkanRenderer::WaitIdle()

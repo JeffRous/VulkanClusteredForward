@@ -156,7 +156,7 @@ bool Application::MainLoop()
 	SceneUpdate(delta_time);
 
 	/// render
-	SceneRender();
+	///SceneRender();
 
 	/// flush
 	renderer->Flush();
