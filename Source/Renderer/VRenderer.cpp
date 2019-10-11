@@ -32,8 +32,7 @@ const std::vector<const char*> deviceExtensions = {
 VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	:Renderer(win)
 {
-	current_frame = 0;
-	last_frame = UINT_MAX;
+	last_command_buffer_idx = UINT_MAX;
 	CreateInstance();
 	CreateSurface();
 	PickPhysicalDevice();
@@ -146,11 +145,10 @@ void VulkanRenderer::CleanUp()
 	vkDestroyImage(device, depth_image, nullptr);
 	vkFreeMemory(device, depth_image_memory, nullptr);
 
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroySemaphore(device, render_finished_semaphores[i], nullptr);
-		vkDestroySemaphore(device, image_available_semaphores[i], nullptr);
-		vkDestroyFence(device, in_flight_fences[i], nullptr);
-	}
+	vkDestroySemaphore(device, render_finished_semaphore, nullptr);
+	vkDestroySemaphore(device, image_available_semaphore, nullptr);
+	vkDestroyFence(device, in_flight_fence, nullptr);
+
 	vkDestroyCommandPool(device, command_pool, nullptr);
 	vkDestroyDescriptorSetLayout(device, desc_layout, nullptr);
 	vkDestroyDescriptorPool(device, desc_pool, nullptr);
@@ -1361,10 +1359,6 @@ void VulkanRenderer::FreeDescriptorSets(VkDescriptorSet* descSets)
 
 void VulkanRenderer::CreateSemaphores()
 {
-	image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	in_flight_fences.resize(MAX_FRAMES_IN_FLIGHT);
-
 	VkSemaphoreCreateInfo semaphoreInfo = {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -1372,16 +1366,13 @@ void VulkanRenderer::CreateSemaphores()
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-	{
-		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &image_available_semaphores[i]) != VK_SUCCESS ||
-			vkCreateSemaphore(device, &semaphoreInfo, nullptr, &render_finished_semaphores[i]) != VK_SUCCESS ||
-			vkCreateFence(device, &fenceInfo, nullptr, &in_flight_fences[i]) != VK_SUCCESS) {
+	if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &image_available_semaphore) != VK_SUCCESS ||
+		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &render_finished_semaphore) != VK_SUCCESS ||
+		vkCreateFence(device, &fenceInfo, nullptr, &in_flight_fence) != VK_SUCCESS) {
 
-			throw std::runtime_error("failed to create semaphores!");
-		}
-		vkResetFences(device, 1, &in_flight_fences[i]);
+		throw std::runtime_error("failed to create semaphores!");
 	}
+	vkResetFences(device, 1, &in_flight_fence);
 }
 
 void VulkanRenderer::CreateTextureSampler(VkSampler* sampler)
@@ -1482,12 +1473,12 @@ void VulkanRenderer::RenderEnd()
 
 void VulkanRenderer::Flush()
 {
-	if (last_frame != UINT_MAX)
+	if (last_command_buffer_idx != UINT_MAX)
 	{
-		vkWaitForFences(device, 1, &in_flight_fences[last_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-		vkResetFences(device, 1, &in_flight_fences[last_frame]);
+		vkWaitForFences(device, 1, &in_flight_fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		vkResetFences(device, 1, &in_flight_fence);
 	
-		VkSemaphore waitSemaphores[] = { render_finished_semaphores[last_frame] };
+		VkSemaphore waitSemaphores[] = { render_finished_semaphore };
 		
 		VkPresentInfoKHR presentInfo = {};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1504,14 +1495,14 @@ void VulkanRenderer::Flush()
 		}
 	}
 
-	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphores[current_frame], VK_NULL_HANDLE, &active_command_buffer_idx);
+	vkAcquireNextImageKHR(device, swap_chain, std::numeric_limits<uint64_t>::max(), image_available_semaphore, VK_NULL_HANDLE, &active_command_buffer_idx);
 
 	Application::Inst()->SceneRender();
 
-	VkSemaphore signalSemaphores[] = { render_finished_semaphores[current_frame] };
+	VkSemaphore signalSemaphores[] = { render_finished_semaphore };
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	VkSemaphore waitSemaphores[] = { image_available_semaphores[current_frame] };
+	VkSemaphore waitSemaphores[] = { image_available_semaphore };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
@@ -1521,13 +1512,11 @@ void VulkanRenderer::Flush()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fences[current_frame]) != VK_SUCCESS) {
+	if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fence) != VK_SUCCESS) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
 	last_command_buffer_idx = active_command_buffer_idx;
-	last_frame = current_frame;
-	current_frame = (current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void VulkanRenderer::WaitIdle()

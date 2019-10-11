@@ -74,7 +74,6 @@ class Material;
 class PointLight;
 class VulkanRenderer : public Renderer
 {
-	const int MAX_FRAMES_IN_FLIGHT = 1;
 	const int MAX_MATERIAL_NUM = 50;
 public:
 	VulkanRenderer(GLFWwindow* win);
@@ -208,15 +207,12 @@ private:
 	std::vector<VkFramebuffer> swap_chain_framebuffers;
 	VkCommandPool command_pool;
 	std::vector<VkCommandBuffer> command_buffers;
-	std::vector<VkSemaphore> image_available_semaphores;
-	std::vector<VkSemaphore> render_finished_semaphores;
-	std::vector<VkFence> in_flight_fences;
+	VkSemaphore image_available_semaphore;
+	VkSemaphore render_finished_semaphore;
+	VkFence in_flight_fence;
 	VkImage depth_image;
 	VkDeviceMemory depth_image_memory;
 	VkImageView depth_image_view;
-
-	size_t current_frame;
-	size_t last_frame;
 
 	VkClearValue clear_color;
 	uint32_t active_command_buffer_idx;
