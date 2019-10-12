@@ -24,9 +24,10 @@ struct SwapChainSupportDetails {
 struct QueueFamilyIndices {
 	std::optional<uint32_t> graphicsFamily;
 	std::optional<uint32_t> presentFamily;
+	std::optional<uint32_t> computeFamily;
 
 	bool isComplete() {
-		return graphicsFamily.has_value() && presentFamily.has_value();
+		return graphicsFamily.has_value() && presentFamily.has_value() && computeFamily.has_value();
 	}
 };
 
@@ -93,6 +94,7 @@ public:
 	void CreateVertexBuffer( void* vdata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateIndexBuffer(void* idata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateImageBuffer(void* imageData, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
+	void CreateComputeBuffer(void* computeData, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateUniformBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void UnmapBufferMemory(VkDeviceMemory& mem);
 	void CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem);
@@ -161,6 +163,8 @@ private:
 	void CreateGraphicsPipeline();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
+	void CreateComputePipeline();
+
 	void CreateDepthResources();
 	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat FindDepthFormat();
@@ -201,9 +205,12 @@ private:
 	VkShaderModule frag_shader_module;
 	VkRenderPass render_pass;
 	VkDescriptorSetLayout desc_layout;
+	VkDescriptorSetLayout comp_desc_layout;
 	VkDescriptorPool desc_pool;
 	VkPipelineLayout pipeline_layout;
+	VkPipelineLayout comp_pipeline_layout;
 	VkPipeline graphics_pipeline;
+	VkPipeline comp_pipeline;
 	std::vector<VkFramebuffer> swap_chain_framebuffers;
 	VkCommandPool command_pool;
 	std::vector<VkCommandBuffer> command_buffers;

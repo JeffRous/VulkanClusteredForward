@@ -272,6 +272,10 @@ QueueFamilyIndices VulkanRenderer::FindQueueFamilies(VkPhysicalDevice device)
 	for (const auto& queueFamily : queueFamilies) {
 		if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.graphicsFamily = i;
+			if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+			{
+				indices.computeFamily = i;	/// here we use one queue to deal with compute, no async compute here
+			}
 		}
 
 		VkBool32 presentSupport = false;
@@ -338,13 +342,13 @@ void VulkanRenderer::CreateLogicDevice()
 	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value(), indices.computeFamily.value() };
 
 	float queuePriority = 1.0f;
 	for (uint32_t queueFamily : uniqueQueueFamilies) {
 		VkDeviceQueueCreateInfo queueCreateInfo = {};
 		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+		queueCreateInfo.queueFamilyIndex = queueFamily;
 		queueCreateInfo.queueCount = 1;
 		queueCreateInfo.pQueuePriorities = &queuePriority;
 		queueCreateInfos.push_back(queueCreateInfo);
@@ -923,6 +927,46 @@ VkShaderModule VulkanRenderer::createShaderModule(const std::vector<char>& code)
 	return shaderModule;
 }
 
+void VulkanRenderer::CreateComputePipeline()
+{
+	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[2] = {
+		{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
+		{1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0}
+	};
+
+	/// desc set for compute shader
+	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		0, 0, 2, descriptorSetLayoutBindings
+	};
+	vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &comp_desc_layout);
+
+	/// pipeline layout
+	VkPipelineLayoutCreateInfo computePipelineLayoutInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		nullptr, 0,
+		1, &comp_desc_layout,
+		0, nullptr
+	};
+	if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &comp_pipeline_layout) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create pipeline layout!");
+	}
+
+	/// pipeline
+	VkComputePipelineCreateInfo computePipelineCreateInfo = {
+		VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+		0, 0,
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_culling.spv")), "main", 0
+		},
+		comp_pipeline_layout, 0, 0
+	};
+	if( vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &comp_pipeline) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create compute pipeline!");
+	}
+}
+
 void VulkanRenderer::CreateDepthResources()
 {
 	VkFormat depthFormat = FindDepthFormat();
@@ -1122,6 +1166,20 @@ void VulkanRenderer::CreateImageBuffer(void* imageData, uint32_t length, VkBuffe
 	vkMapMemory(device, mem, 0, bufferSize, 0, &data);
 	memcpy(data, imageData, static_cast<size_t>(bufferSize));
 	vkUnmapMemory(device, mem);
+}
+
+void VulkanRenderer::CreateComputeBuffer(void* computeData, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
+{
+	VkDeviceSize bufferSize = length;
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, mem);
+
+	if (computeData != NULL)
+	{
+		void* data;
+		vkMapMemory(device, mem, 0, bufferSize, 0, &data);
+		memcpy(data, computeData, static_cast<size_t>(bufferSize));
+		vkUnmapMemory(device, mem);
+	}
 }
 
 void VulkanRenderer::CreateUniformBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
