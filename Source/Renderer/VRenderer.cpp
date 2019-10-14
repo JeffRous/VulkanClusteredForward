@@ -958,7 +958,7 @@ void VulkanRenderer::CreateComputePipeline()
 		0, 0,
 		{
 			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_culling.spv")), "main", 0
+			0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_calc.spv")), "main", 0
 		},
 		comp_pipeline_layout, 0, 0
 	};
