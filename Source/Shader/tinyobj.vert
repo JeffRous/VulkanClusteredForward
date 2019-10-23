@@ -49,7 +49,7 @@ void main() {
     fragTexCoord = inTexcoord;
     fragPos = vec3(transform.model * inPosition);
 
-    mat3 normalMatrix = transpose(inverse(mat3(transform.model)));
+    mat3 normalMatrix = transpose(inverse(mat3(transform.model))); /// maybe have scale
     vec3 T = normalize(vec3(normalMatrix * inTangent));
     vec3 N = normalize(vec3(normalMatrix * inNormal));
     T = normalize(T - dot(T, N) * N);
