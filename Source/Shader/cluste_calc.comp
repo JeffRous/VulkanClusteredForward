@@ -1,4 +1,4 @@
-#version 450 core
+#version 430 core
 layout(local_size_x = 1, local_size_y = 1) in;
 
 //ssbo initialization
@@ -16,8 +16,8 @@ layout (std430, binding = 2) buffer screenToView{
 };
 
 //Shared between all clusters
-uniform float zNear;
-uniform float zFar;
+float zNear;
+float zFar;
 
 //Function prototypes
 vec4 clipToView(vec4 clip);
