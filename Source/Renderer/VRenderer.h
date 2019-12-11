@@ -163,7 +163,8 @@ private:
 	void CreateGraphicsPipeline();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
-	void CreateComputePipeline();
+	void CreateComputeClustePipeline();
+	void CreateCullClustePipeline();
 
 	void CreateDepthResources();
 	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
@@ -205,12 +206,15 @@ private:
 	VkShaderModule frag_shader_module;
 	VkRenderPass render_pass;
 	VkDescriptorSetLayout desc_layout;
-	VkDescriptorSetLayout comp_desc_layout;
 	VkDescriptorPool desc_pool;
 	VkPipelineLayout pipeline_layout;
-	VkPipelineLayout comp_pipeline_layout;
 	VkPipeline graphics_pipeline;
-	VkPipeline comp_pipeline;
+	VkDescriptorSetLayout comp_cluste_desc_layout;
+	VkPipelineLayout comp_cluste_pipeline_layout;
+	VkPipeline comp_cluste_pipeline;
+	VkDescriptorSetLayout cull_cluste_desc_layout;
+	VkPipelineLayout cull_cluste_pipeline_layout;
+	VkPipeline cull_cluste_pipeline;
 	std::vector<VkFramebuffer> swap_chain_framebuffers;
 	VkCommandPool command_pool;
 	std::vector<VkCommandBuffer> command_buffers;

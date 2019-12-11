@@ -41,6 +41,10 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
+	/// computer shader
+	//CreateComputeClustePipeline();
+	//CreateCullClustePipeline();
+	//////////////////////////
 	CreateCommandPool();
 	CreateDepthResources();
 	CreateFramebuffers();
@@ -160,6 +164,11 @@ void VulkanRenderer::CleanUp()
 	vkDestroyPipeline(device, graphics_pipeline, nullptr);
 	vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
 	vkDestroyRenderPass(device, render_pass, nullptr);
+
+	vkDestroyPipeline(device, comp_cluste_pipeline, nullptr);
+	vkDestroyPipelineLayout(device, comp_cluste_pipeline_layout, nullptr);
+	vkDestroyPipeline(device, cull_cluste_pipeline, nullptr);
+	vkDestroyPipelineLayout(device, cull_cluste_pipeline_layout, nullptr);
 
 	vkDestroyShaderModule(device, frag_shader_module, nullptr);
 	vkDestroyShaderModule(device, vert_shader_module, nullptr);
@@ -927,7 +936,7 @@ VkShaderModule VulkanRenderer::createShaderModule(const std::vector<char>& code)
 	return shaderModule;
 }
 
-void VulkanRenderer::CreateComputePipeline()
+void VulkanRenderer::CreateComputeClustePipeline()
 {
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[2] = {
 		{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
@@ -939,16 +948,16 @@ void VulkanRenderer::CreateComputePipeline()
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		0, 0, 2, descriptorSetLayoutBindings
 	};
-	vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &comp_desc_layout);
+	vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &comp_cluste_desc_layout);
 
 	/// pipeline layout
 	VkPipelineLayoutCreateInfo computePipelineLayoutInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr, 0,
-		1, &comp_desc_layout,
+		1, &comp_cluste_desc_layout,
 		0, nullptr
 	};
-	if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &comp_pipeline_layout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &comp_cluste_pipeline_layout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
@@ -960,9 +969,53 @@ void VulkanRenderer::CreateComputePipeline()
 			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 			0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_calc.spv")), "main", 0
 		},
-		comp_pipeline_layout, 0, 0
+		comp_cluste_pipeline_layout, 0, 0
 	};
-	if( vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &comp_pipeline) != VK_SUCCESS) {
+	if( vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &comp_cluste_pipeline) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create compute pipeline!");
+	}
+}
+
+void VulkanRenderer::CreateCullClustePipeline()
+{
+	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[6] = {
+		{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
+		{1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
+		{2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
+		{3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
+		{4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
+		{5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0}
+	};
+
+	/// desc set for compute shader
+	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		0, 0, 6, descriptorSetLayoutBindings
+	};
+	vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &cull_cluste_desc_layout);
+
+	/// pipeline layout
+	VkPipelineLayoutCreateInfo computePipelineLayoutInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		nullptr, 0,
+		1, &cull_cluste_desc_layout,
+		0, nullptr
+	};
+	if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &cull_cluste_pipeline_layout) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create pipeline layout!");
+	}
+
+	/// pipeline
+	VkComputePipelineCreateInfo computePipelineCreateInfo = {
+		VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+		0, 0,
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_culling.spv")), "main", 0
+		},
+		cull_cluste_pipeline_layout, 0, 0
+	};
+	if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &cull_cluste_pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create compute pipeline!");
 	}
 }
