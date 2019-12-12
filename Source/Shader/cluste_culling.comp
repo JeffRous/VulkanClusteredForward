@@ -19,29 +19,29 @@ struct VolumeTileAABB{
     vec4 maxPoint;
 };
 
-layout (std430, binding = 1) buffer clusterAABB{
+layout (std430, binding = 0) buffer clusterAABB{
     VolumeTileAABB cluster[];
 };
 
-layout (std430, binding = 2) buffer screenToView{
+layout (std430, binding = 1) buffer screenToView{
     mat4 inverseProjection;
     uvec4 tileSizes;
     uvec2 screenDimensions;
 };
 
-layout (std430, binding = 3) buffer lightSSBO{
+layout (std430, binding = 2) buffer lightSSBO{
     PointLight pointLight[];
 };
 
-layout (std430, binding = 4) buffer lightIndexSSBO{
+layout (std430, binding = 3) buffer lightIndexSSBO{
     uint globalLightIndexList[];
 };
 
-layout (std430, binding = 5) buffer lightGridSSBO{
+layout (std430, binding = 4) buffer lightGridSSBO{
     LightGrid lightGrid[];
 };
 
-layout (std430, binding = 6) buffer globalIndexCountSSBO{
+layout (std430, binding = 5) buffer globalIndexCountSSBO{
     uint globalIndexCount;
 };
 

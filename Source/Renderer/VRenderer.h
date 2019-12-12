@@ -70,6 +70,12 @@ struct PointLightData {
 	float attenuation_exp;
 };
 
+/// cluste AABB
+struct VolumeTileAABB {
+	glm::vec4 minPoint;
+	glm::vec4 maxPoint;
+};
+
 class Texture;
 class Material;
 class PointLight;
@@ -125,14 +131,7 @@ public:
 	void AddLight(PointLight* light);
 	void ClearLight();
 
-	/*
-		Next week
-		Change uniform buffer to hold more matrix	(update uniform data individually)
-		Add uniform buffer to hold light
-		Add uniform buffer for material
-		Add a normal texture sampler
-		Fix the code for forward rendering
-	*/
+	void UpdateComputeDescriptorSet();
 
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();
@@ -163,6 +162,7 @@ private:
 	void CreateGraphicsPipeline();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
+	void InitializeClusteRendering();
 	void CreateComputeClustePipeline();
 	void CreateCullClustePipeline();
 
@@ -245,6 +245,10 @@ private:
 	std::vector<VkDeviceMemory> light_uniform_buffer_memorys;
 	std::vector<VkDescriptorBufferInfo> light_uniform_buffer_infos;
 	std::vector<void*> light_uniform_buffer_datas;
+
+	VolumeTileAABB* tile_aabbs;
+	glm::uvec2 tile_size;	/// ss width height
+	glm::uvec3 group_num;
 };
 
 

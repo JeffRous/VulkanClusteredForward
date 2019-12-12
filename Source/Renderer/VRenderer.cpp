@@ -42,8 +42,8 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateRenderPass();
 	CreateGraphicsPipeline();
 	/// computer shader
-	//CreateComputeClustePipeline();
-	//CreateCullClustePipeline();
+	CreateComputeClustePipeline();
+	CreateCullClustePipeline();
 	//////////////////////////
 	CreateCommandPool();
 	CreateDepthResources();
@@ -1018,6 +1018,24 @@ void VulkanRenderer::CreateCullClustePipeline()
 	if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &cull_cluste_pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create compute pipeline!");
 	}
+}
+
+void VulkanRenderer::InitializeClusteRendering()
+{
+	CreateComputeClustePipeline();
+	CreateCullClustePipeline();
+
+	/// set computer number and tile size in screen space
+	tile_size.x = Application::Inst()->GetWidth() / 20;
+	tile_size.y = Application::Inst()->GetHeight() / 20;
+	group_num = glm::uvec3(20, 20, 10);
+
+
+}
+
+void VulkanRenderer::UpdateComputeDescriptorSet()
+{
+	
 }
 
 void VulkanRenderer::CreateDepthResources()
