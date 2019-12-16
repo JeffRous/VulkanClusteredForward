@@ -76,6 +76,14 @@ struct VolumeTileAABB {
 	glm::vec4 maxPoint;
 };
 
+/// screen to view for cluste calculate
+struct ScreenToView
+{
+	glm::mat4 inverseProjection;
+	glm::uvec4 tileSizes;
+	glm::uvec2 screenDimensions;
+};
+
 class Texture;
 class Material;
 class PointLight;
@@ -100,7 +108,7 @@ public:
 	void CreateVertexBuffer( void* vdata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateIndexBuffer(void* idata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateImageBuffer(void* imageData, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
-	void CreateComputeBuffer(void* computeData, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
+	void CreateComputeBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateUniformBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void UnmapBufferMemory(VkDeviceMemory& mem);
 	void CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem);
@@ -163,8 +171,7 @@ private:
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
 	void InitializeClusteRendering();
-	void CreateComputeClustePipeline();
-	void CreateCullClustePipeline();
+	void CreateCompPipeline();
 
 	void CreateDepthResources();
 	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
@@ -186,6 +193,13 @@ private:
 	void CreateUniformBuffers();
 
 	void CreateDescriptorSetsPool();
+
+	void CreateCompDescriptorSetsPool();
+	void AllocateCompDescriptorSets(VkDescriptorSet* descSets);
+	void FreeCompDescriptorSets(VkDescriptorSet* descSets);
+
+	void CreateCompDescriptorSets();
+	void ReleaseCompDescriptorSets();
 
 	void CreateSemaphores();
 
@@ -209,12 +223,6 @@ private:
 	VkDescriptorPool desc_pool;
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
-	VkDescriptorSetLayout comp_cluste_desc_layout;
-	VkPipelineLayout comp_cluste_pipeline_layout;
-	VkPipeline comp_cluste_pipeline;
-	VkDescriptorSetLayout cull_cluste_desc_layout;
-	VkPipelineLayout cull_cluste_pipeline_layout;
-	VkPipeline cull_cluste_pipeline;
 	std::vector<VkFramebuffer> swap_chain_framebuffers;
 	VkCommandPool command_pool;
 	std::vector<VkCommandBuffer> command_buffers;
@@ -246,9 +254,27 @@ private:
 	std::vector<VkDescriptorBufferInfo> light_uniform_buffer_infos;
 	std::vector<void*> light_uniform_buffer_datas;
 
-	VolumeTileAABB* tile_aabbs;
+	/// cluste calculate
 	glm::uvec2 tile_size;	/// ss width height
 	glm::uvec3 group_num;
+	VkDescriptorPool comp_desc_pool;
+	VkDescriptorSetLayout comp_desc_layout;
+	VkPipelineLayout comp_pipeline_layout;
+	VkPipeline comp_pipeline;
+	VkDescriptorSet comp_cluste_desc_set;
+	VkDescriptorSet cull_cluste_desc_set;
+
+	/// tile aabb
+	VkBuffer tile_aabbs_buffer;
+	VkDeviceMemory tile_aabbs_buffer_memory;
+	void* tile_aabbs_buffer_data;
+	VkDescriptorBufferInfo tile_aabbs_buffer_info;
+
+	/// screen to view
+	VkBuffer screen_to_view_buffer;
+	VkDeviceMemory screen_to_view_buffer_memory;
+	void* screen_to_view_buffer_data;
+	VkDescriptorBufferInfo screen_to_view_buffer_info;
 };
 
 

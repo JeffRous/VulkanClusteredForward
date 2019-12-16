@@ -41,10 +41,7 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
-	/// computer shader
-	CreateComputeClustePipeline();
-	CreateCullClustePipeline();
-	//////////////////////////
+	InitializeClusteRendering();
 	CreateCommandPool();
 	CreateDepthResources();
 	CreateFramebuffers();
@@ -165,10 +162,11 @@ void VulkanRenderer::CleanUp()
 	vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
 	vkDestroyRenderPass(device, render_pass, nullptr);
 
-	vkDestroyPipeline(device, comp_cluste_pipeline, nullptr);
-	vkDestroyPipelineLayout(device, comp_cluste_pipeline_layout, nullptr);
-	vkDestroyPipeline(device, cull_cluste_pipeline, nullptr);
-	vkDestroyPipelineLayout(device, cull_cluste_pipeline_layout, nullptr);
+	ReleaseCompDescriptorSets();
+	vkDestroyDescriptorPool(device, comp_desc_pool, nullptr);
+	vkDestroyDescriptorSetLayout(device, comp_desc_layout, nullptr);
+	vkDestroyPipelineLayout(device, comp_pipeline_layout, nullptr);
+	vkDestroyPipeline(device, comp_pipeline, nullptr);
 
 	vkDestroyShaderModule(device, frag_shader_module, nullptr);
 	vkDestroyShaderModule(device, vert_shader_module, nullptr);
@@ -936,47 +934,7 @@ VkShaderModule VulkanRenderer::createShaderModule(const std::vector<char>& code)
 	return shaderModule;
 }
 
-void VulkanRenderer::CreateComputeClustePipeline()
-{
-	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[2] = {
-		{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
-		{1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0}
-	};
-
-	/// desc set for compute shader
-	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		0, 0, 2, descriptorSetLayoutBindings
-	};
-	vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &comp_cluste_desc_layout);
-
-	/// pipeline layout
-	VkPipelineLayoutCreateInfo computePipelineLayoutInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr, 0,
-		1, &comp_cluste_desc_layout,
-		0, nullptr
-	};
-	if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &comp_cluste_pipeline_layout) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create pipeline layout!");
-	}
-
-	/// pipeline
-	VkComputePipelineCreateInfo computePipelineCreateInfo = {
-		VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-		0, 0,
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_calc.spv")), "main", 0
-		},
-		comp_cluste_pipeline_layout, 0, 0
-	};
-	if( vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &comp_cluste_pipeline) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create compute pipeline!");
-	}
-}
-
-void VulkanRenderer::CreateCullClustePipeline()
+void VulkanRenderer::CreateCompPipeline()
 {
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[6] = {
 		{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
@@ -992,50 +950,123 @@ void VulkanRenderer::CreateCullClustePipeline()
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		0, 0, 6, descriptorSetLayoutBindings
 	};
-	vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &cull_cluste_desc_layout);
+	vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &comp_desc_layout);
 
 	/// pipeline layout
 	VkPipelineLayoutCreateInfo computePipelineLayoutInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr, 0,
-		1, &cull_cluste_desc_layout,
+		1, &comp_desc_layout,
 		0, nullptr
 	};
-	if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &cull_cluste_pipeline_layout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &comp_pipeline_layout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
 	/// pipeline
-	VkComputePipelineCreateInfo computePipelineCreateInfo = {
-		VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-		0, 0,
+	VkComputePipelineCreateInfo computePipelineCreateInfos[2] = {
 		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_culling.spv")), "main", 0
+			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+			0, 0,
+			{
+				VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_calc.spv")), "main", 0
+			},
+			comp_pipeline_layout, 0, 0
 		},
-		cull_cluste_pipeline_layout, 0, 0
+		{
+			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+			0, 0,
+			{
+				VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_culling.spv")), "main", 0
+			},
+			comp_pipeline_layout, 0, 0
+		},
 	};
-	if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &cull_cluste_pipeline) != VK_SUCCESS) {
+	if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 2, computePipelineCreateInfos, nullptr, &comp_pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create compute pipeline!");
 	}
 }
 
 void VulkanRenderer::InitializeClusteRendering()
 {
-	CreateComputeClustePipeline();
-	CreateCullClustePipeline();
+	CreateCompPipeline();
 
+	/// create desc set pool for cluste shadering
+	CreateCompDescriptorSetsPool();
+
+	CreateCompDescriptorSets();
+}
+
+void VulkanRenderer::AllocateCompDescriptorSets(VkDescriptorSet* descSets)
+{
+	VkDescriptorSetLayout desc_layouts[1] = { comp_desc_layout };
+	VkDescriptorSetAllocateInfo allocInfo[1];
+	allocInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo[0].pNext = NULL;
+	allocInfo[0].descriptorPool = comp_desc_pool;
+	allocInfo[0].descriptorSetCount = 1;
+	allocInfo[0].pSetLayouts = desc_layouts;
+	vkAllocateDescriptorSets(device, allocInfo, descSets);
+}
+
+void VulkanRenderer::CreateCompDescriptorSets()
+{
 	/// set computer number and tile size in screen space
 	tile_size.x = Application::Inst()->GetWidth() / 20;
 	tile_size.y = Application::Inst()->GetHeight() / 20;
 	group_num = glm::uvec3(20, 20, 10);
 
+	/// tile aabb
+	AllocateCompDescriptorSets(&comp_cluste_desc_set);
+	VkDeviceSize bufferSize = sizeof(VolumeTileAABB) * 20 * 20 * 10;
+	CreateComputeBuffer(&tile_aabbs_buffer_data, (uint32_t)bufferSize, tile_aabbs_buffer, tile_aabbs_buffer_memory);
+	tile_aabbs_buffer_info.buffer = tile_aabbs_buffer;
+	tile_aabbs_buffer_info.offset = 0;
+	tile_aabbs_buffer_info.range = bufferSize;
 
+	/// screen to view
+	bufferSize = sizeof(ScreenToView);
+	CreateComputeBuffer(&screen_to_view_buffer_data, (uint32_t)bufferSize, screen_to_view_buffer, screen_to_view_buffer_memory);
+	ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
+	stv->screenDimensions = glm::uvec2(Application::Inst()->GetWidth(), Application::Inst()->GetHeight());
+	stv->tileSizes = glm::uvec4(tile_size, 0, 0);
+	screen_to_view_buffer_info.buffer = screen_to_view_buffer;
+	screen_to_view_buffer_info.offset = 0;
+	screen_to_view_buffer_info.range = bufferSize;
+}
+
+void VulkanRenderer::ReleaseCompDescriptorSets()
+{
+	
 }
 
 void VulkanRenderer::UpdateComputeDescriptorSet()
 {
-	
+	/// set descriptor sets
+	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+	descriptorWrites[0] = {};
+	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[0].pNext = NULL;
+	descriptorWrites[0].dstSet = comp_cluste_desc_set;
+	descriptorWrites[0].descriptorCount = 1;
+	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	descriptorWrites[0].pBufferInfo = &tile_aabbs_buffer_info;
+	descriptorWrites[0].dstArrayElement = 0;
+	descriptorWrites[0].dstBinding = 0;
+
+	descriptorWrites[1] = {};
+	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[1].pNext = NULL;
+	descriptorWrites[1].dstSet = comp_cluste_desc_set;
+	descriptorWrites[1].descriptorCount = 1;
+	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	descriptorWrites[1].pBufferInfo = &screen_to_view_buffer_info;
+	descriptorWrites[1].dstArrayElement = 0;
+	descriptorWrites[1].dstBinding = 1;
+
+	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
 }
 
 void VulkanRenderer::CreateDepthResources()
@@ -1239,18 +1270,12 @@ void VulkanRenderer::CreateImageBuffer(void* imageData, uint32_t length, VkBuffe
 	vkUnmapMemory(device, mem);
 }
 
-void VulkanRenderer::CreateComputeBuffer(void* computeData, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
+void VulkanRenderer::CreateComputeBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
 {
 	VkDeviceSize bufferSize = length;
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, mem);
 
-	if (computeData != NULL)
-	{
-		void* data;
-		vkMapMemory(device, mem, 0, bufferSize, 0, &data);
-		memcpy(data, computeData, static_cast<size_t>(bufferSize));
-		vkUnmapMemory(device, mem);
-	}
+	vkMapMemory(device, mem, 0, bufferSize, 0, data);
 }
 
 void VulkanRenderer::CreateUniformBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
@@ -1484,6 +1509,38 @@ void VulkanRenderer::AllocateDescriptorSets(VkDescriptorSet* descSets)
 void VulkanRenderer::FreeDescriptorSets(VkDescriptorSet* descSets)
 {
 	vkFreeDescriptorSets(device, desc_pool, swap_chain_images.size(), descSets);
+}
+
+void VulkanRenderer::CreateCompDescriptorSetsPool()
+{
+	std::array<VkDescriptorPoolSize, 6> typeCounts = {};
+	typeCounts[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[0].descriptorCount = 1;
+	typeCounts[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[1].descriptorCount = 1;
+	typeCounts[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[2].descriptorCount = 1;
+	typeCounts[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[3].descriptorCount = 1;
+	typeCounts[4].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[4].descriptorCount = 1;
+	typeCounts[5].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[5].descriptorCount = 1;
+
+	VkDescriptorPoolCreateInfo descriptorPool = {};
+	descriptorPool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	descriptorPool.pNext = NULL;
+	descriptorPool.maxSets = 2;	// one for compute cluste and the other is for culling cluste
+	descriptorPool.poolSizeCount = static_cast<uint32_t>(typeCounts.size());
+	descriptorPool.pPoolSizes = typeCounts.data();
+	descriptorPool.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+	vkCreateDescriptorPool(device, &descriptorPool, NULL, &comp_desc_pool);
+}
+
+void VulkanRenderer::FreeCompDescriptorSets(VkDescriptorSet* descSets)
+{
+	vkFreeDescriptorSets(device, comp_desc_pool, 1, descSets);
 }
 
 void VulkanRenderer::CreateSemaphores()
