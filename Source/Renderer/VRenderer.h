@@ -84,6 +84,12 @@ struct ScreenToView
 	glm::uvec2 screenDimensions;
 };
 
+/// light grid
+struct LightGrid {
+	glm::uint offset;
+	glm::uint count;
+};
+
 class Texture;
 class Material;
 class PointLight;
@@ -172,6 +178,7 @@ private:
 
 	void InitializeClusteRendering();
 	void CreateCompPipeline();
+	void CreateCompCommandBuffer();
 
 	void CreateDepthResources();
 	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
@@ -261,8 +268,8 @@ private:
 	VkDescriptorSetLayout comp_desc_layout;
 	VkPipelineLayout comp_pipeline_layout;
 	VkPipeline comp_pipeline;
-	VkDescriptorSet comp_cluste_desc_set;
-	VkDescriptorSet cull_cluste_desc_set;
+	VkDescriptorSet comp_desc_set[3];
+	VkCommandBuffer comp_command_buffer;
 
 	/// tile aabb
 	VkBuffer tile_aabbs_buffer;
@@ -275,6 +282,30 @@ private:
 	VkDeviceMemory screen_to_view_buffer_memory;
 	void* screen_to_view_buffer_data;
 	VkDescriptorBufferInfo screen_to_view_buffer_info;
+
+	/// light datas
+	VkBuffer light_datas_buffer;
+	VkDeviceMemory light_datas_buffer_memory;
+	void* light_datas_buffer_data;
+	VkDescriptorBufferInfo light_datas_buffer_info;
+
+	/// light indexes
+	VkBuffer light_indexes_buffer;
+	VkDeviceMemory light_indexes_buffer_memory;
+	void* light_indexes_buffer_data;
+	VkDescriptorBufferInfo light_indexes_buffer_info;
+
+	/// light grids
+	VkBuffer light_grids_buffer;
+	VkDeviceMemory light_grids_buffer_memory;
+	void* light_grids_buffer_data;
+	VkDescriptorBufferInfo light_grids_buffer_info;
+
+	/// index count
+	VkBuffer index_count_buffer;
+	VkDeviceMemory index_count_buffer_memory;
+	void* index_count_buffer_data;
+	VkDescriptorBufferInfo index_count_buffer_info;
 };
 
 

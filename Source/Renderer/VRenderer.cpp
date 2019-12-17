@@ -934,11 +934,24 @@ VkShaderModule VulkanRenderer::createShaderModule(const std::vector<char>& code)
 	return shaderModule;
 }
 
+void VulkanRenderer::CreateCompCommandBuffer()
+{
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = command_pool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = 1;
+
+	if (vkAllocateCommandBuffers(device, &allocInfo, &comp_command_buffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate command buffers!");
+	}
+}
+
 void VulkanRenderer::CreateCompPipeline()
 {
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[6] = {
 		{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
-		{1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
+		{1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
 		{2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
 		{3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
 		{4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
@@ -991,6 +1004,7 @@ void VulkanRenderer::CreateCompPipeline()
 
 void VulkanRenderer::InitializeClusteRendering()
 {
+	CreateCompCommandBuffer();
 	CreateCompPipeline();
 
 	/// create desc set pool for cluste shadering
@@ -1001,12 +1015,12 @@ void VulkanRenderer::InitializeClusteRendering()
 
 void VulkanRenderer::AllocateCompDescriptorSets(VkDescriptorSet* descSets)
 {
-	VkDescriptorSetLayout desc_layouts[1] = { comp_desc_layout };
+	VkDescriptorSetLayout desc_layouts[3] = { comp_desc_layout, comp_desc_layout, comp_desc_layout };
 	VkDescriptorSetAllocateInfo allocInfo[1];
 	allocInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo[0].pNext = NULL;
 	allocInfo[0].descriptorPool = comp_desc_pool;
-	allocInfo[0].descriptorSetCount = 1;
+	allocInfo[0].descriptorSetCount = swap_chain_images.size();
 	allocInfo[0].pSetLayouts = desc_layouts;
 	vkAllocateDescriptorSets(device, allocInfo, descSets);
 }
@@ -1018,8 +1032,10 @@ void VulkanRenderer::CreateCompDescriptorSets()
 	tile_size.y = Application::Inst()->GetHeight() / 20;
 	group_num = glm::uvec3(20, 20, 10);
 
+	/// allocate desc sets
+	AllocateCompDescriptorSets(comp_desc_set);
+
 	/// tile aabb
-	AllocateCompDescriptorSets(&comp_cluste_desc_set);
 	VkDeviceSize bufferSize = sizeof(VolumeTileAABB) * 20 * 20 * 10;
 	CreateComputeBuffer(&tile_aabbs_buffer_data, (uint32_t)bufferSize, tile_aabbs_buffer, tile_aabbs_buffer_memory);
 	tile_aabbs_buffer_info.buffer = tile_aabbs_buffer;
@@ -1028,18 +1044,36 @@ void VulkanRenderer::CreateCompDescriptorSets()
 
 	/// screen to view
 	bufferSize = sizeof(ScreenToView);
-	CreateComputeBuffer(&screen_to_view_buffer_data, (uint32_t)bufferSize, screen_to_view_buffer, screen_to_view_buffer_memory);
+	CreateUniformBuffer(&screen_to_view_buffer_data, (uint32_t)bufferSize, screen_to_view_buffer, screen_to_view_buffer_memory);
 	ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
 	stv->screenDimensions = glm::uvec2(Application::Inst()->GetWidth(), Application::Inst()->GetHeight());
 	stv->tileSizes = glm::uvec4(tile_size, 0, 0);
 	screen_to_view_buffer_info.buffer = screen_to_view_buffer;
 	screen_to_view_buffer_info.offset = 0;
 	screen_to_view_buffer_info.range = bufferSize;
+
+	/// light datas
+	bufferSize = sizeof(PointLightData) * MAX_LIGHT_NUM;
+	CreateComputeBuffer(&light_datas_buffer_data, (uint32_t)bufferSize, light_datas_buffer, light_datas_buffer_memory);
+	light_datas_buffer_info.buffer = light_datas_buffer;
+	light_datas_buffer_info.offset = 0;
+	light_datas_buffer_info.range = bufferSize;
+
+	/// light indexes
+	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * 20 * 20 * 10;
+	CreateComputeBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, light_indexes_buffer, light_indexes_buffer_memory);
+	light_indexes_buffer_info.buffer = light_indexes_buffer;
+	light_indexes_buffer_info.offset = 0;
+	light_indexes_buffer_info.range = bufferSize;
 }
 
 void VulkanRenderer::ReleaseCompDescriptorSets()
 {
-	
+	UnmapBufferMemory(tile_aabbs_buffer_memory);
+	UnmapBufferMemory(screen_to_view_buffer_memory);
+	CleanBuffer(tile_aabbs_buffer, tile_aabbs_buffer_memory);
+	CleanBuffer(screen_to_view_buffer, screen_to_view_buffer_memory);
+	FreeCompDescriptorSets(comp_desc_set);
 }
 
 void VulkanRenderer::UpdateComputeDescriptorSet()
@@ -1049,7 +1083,7 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	descriptorWrites[0] = {};
 	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[0].pNext = NULL;
-	descriptorWrites[0].dstSet = comp_cluste_desc_set;
+	descriptorWrites[0].dstSet = comp_desc_set[active_command_buffer_idx];
 	descriptorWrites[0].descriptorCount = 1;
 	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	descriptorWrites[0].pBufferInfo = &tile_aabbs_buffer_info;
@@ -1059,14 +1093,16 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	descriptorWrites[1] = {};
 	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[1].pNext = NULL;
-	descriptorWrites[1].dstSet = comp_cluste_desc_set;
+	descriptorWrites[1].dstSet = comp_desc_set[active_command_buffer_idx];
 	descriptorWrites[1].descriptorCount = 1;
-	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	descriptorWrites[1].pBufferInfo = &screen_to_view_buffer_info;
 	descriptorWrites[1].dstArrayElement = 0;
 	descriptorWrites[1].dstBinding = 1;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
+
+	vkCmdBindDescriptorSets(comp_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline_layout, 0, 1, &comp_desc_set[active_command_buffer_idx], 0, nullptr);
 }
 
 void VulkanRenderer::CreateDepthResources()
@@ -1515,22 +1551,22 @@ void VulkanRenderer::CreateCompDescriptorSetsPool()
 {
 	std::array<VkDescriptorPoolSize, 6> typeCounts = {};
 	typeCounts[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	typeCounts[0].descriptorCount = 1;
-	typeCounts[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	typeCounts[1].descriptorCount = 1;
+	typeCounts[0].descriptorCount = swap_chain_images.size();
+	typeCounts[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	typeCounts[1].descriptorCount = swap_chain_images.size();
 	typeCounts[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	typeCounts[2].descriptorCount = 1;
+	typeCounts[2].descriptorCount = swap_chain_images.size();
 	typeCounts[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	typeCounts[3].descriptorCount = 1;
+	typeCounts[3].descriptorCount = swap_chain_images.size();
 	typeCounts[4].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	typeCounts[4].descriptorCount = 1;
+	typeCounts[4].descriptorCount = swap_chain_images.size();
 	typeCounts[5].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	typeCounts[5].descriptorCount = 1;
+	typeCounts[5].descriptorCount = swap_chain_images.size();
 
 	VkDescriptorPoolCreateInfo descriptorPool = {};
 	descriptorPool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	descriptorPool.pNext = NULL;
-	descriptorPool.maxSets = 2;	// one for compute cluste and the other is for culling cluste
+	descriptorPool.maxSets = swap_chain_images.size();
 	descriptorPool.poolSizeCount = static_cast<uint32_t>(typeCounts.size());
 	descriptorPool.pPoolSizes = typeCounts.data();
 	descriptorPool.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -1540,7 +1576,7 @@ void VulkanRenderer::CreateCompDescriptorSetsPool()
 
 void VulkanRenderer::FreeCompDescriptorSets(VkDescriptorSet* descSets)
 {
-	vkFreeDescriptorSets(device, comp_desc_pool, 1, descSets);
+	vkFreeDescriptorSets(device, comp_desc_pool, swap_chain_images.size(), descSets);
 }
 
 void VulkanRenderer::CreateSemaphores()
@@ -1645,6 +1681,10 @@ void VulkanRenderer::RenderBegin()
 	if (camera != NULL)
 	{
 		camera->UpdateViewProject();
+
+		/// cluster compute parameter setting
+		ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
+		stv->inverseProjection = glm::inverse(*camera->GetProjectMatrix());
 	}
 }
 
