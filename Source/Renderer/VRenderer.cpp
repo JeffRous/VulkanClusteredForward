@@ -1065,21 +1065,43 @@ void VulkanRenderer::CreateCompDescriptorSets()
 	light_indexes_buffer_info.buffer = light_indexes_buffer;
 	light_indexes_buffer_info.offset = 0;
 	light_indexes_buffer_info.range = bufferSize;
+
+	/// light grids
+	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * 20 * 20 * 10;
+	CreateComputeBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
+	light_grids_buffer_info.buffer = light_grids_buffer;
+	light_grids_buffer_info.offset = 0;
+	light_grids_buffer_info.range = bufferSize;
+
+	/// global index count
+	bufferSize = sizeof(glm::uint);
+	CreateComputeBuffer(&index_count_buffer_data, (uint32_t)bufferSize, index_count_buffer, index_count_buffer_memory);
+	index_count_buffer_info.buffer = index_count_buffer;
+	index_count_buffer_info.offset = 0;
+	index_count_buffer_info.range = bufferSize;
 }
 
 void VulkanRenderer::ReleaseCompDescriptorSets()
 {
 	UnmapBufferMemory(tile_aabbs_buffer_memory);
 	UnmapBufferMemory(screen_to_view_buffer_memory);
+	UnmapBufferMemory(light_datas_buffer_memory);
+	UnmapBufferMemory(light_indexes_buffer_memory);
+	UnmapBufferMemory(light_grids_buffer_memory);
+	UnmapBufferMemory(index_count_buffer_memory);
 	CleanBuffer(tile_aabbs_buffer, tile_aabbs_buffer_memory);
 	CleanBuffer(screen_to_view_buffer, screen_to_view_buffer_memory);
+	CleanBuffer(light_datas_buffer, light_datas_buffer_memory);
+	CleanBuffer(light_indexes_buffer, light_indexes_buffer_memory);
+	CleanBuffer(light_grids_buffer, light_grids_buffer_memory);
+	CleanBuffer(index_count_buffer, index_count_buffer_memory);
 	FreeCompDescriptorSets(comp_desc_set);
 }
 
 void VulkanRenderer::UpdateComputeDescriptorSet()
 {
 	/// set descriptor sets
-	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+	std::array<VkWriteDescriptorSet, 6> descriptorWrites = {};
 	descriptorWrites[0] = {};
 	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[0].pNext = NULL;
@@ -1099,6 +1121,46 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	descriptorWrites[1].pBufferInfo = &screen_to_view_buffer_info;
 	descriptorWrites[1].dstArrayElement = 0;
 	descriptorWrites[1].dstBinding = 1;
+
+	descriptorWrites[2] = {};
+	descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[2].pNext = NULL;
+	descriptorWrites[2].dstSet = comp_desc_set[active_command_buffer_idx];
+	descriptorWrites[2].descriptorCount = 1;
+	descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	descriptorWrites[2].pBufferInfo = &light_datas_buffer_info;
+	descriptorWrites[2].dstArrayElement = 0;
+	descriptorWrites[2].dstBinding = 2;
+
+	descriptorWrites[3] = {};
+	descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[3].pNext = NULL;
+	descriptorWrites[3].dstSet = comp_desc_set[active_command_buffer_idx];
+	descriptorWrites[3].descriptorCount = 1;
+	descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	descriptorWrites[3].pBufferInfo = &light_indexes_buffer_info;
+	descriptorWrites[3].dstArrayElement = 0;
+	descriptorWrites[3].dstBinding = 3;
+
+	descriptorWrites[4] = {};
+	descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[4].pNext = NULL;
+	descriptorWrites[4].dstSet = comp_desc_set[active_command_buffer_idx];
+	descriptorWrites[4].descriptorCount = 1;
+	descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	descriptorWrites[4].pBufferInfo = &light_grids_buffer_info;
+	descriptorWrites[4].dstArrayElement = 0;
+	descriptorWrites[4].dstBinding = 4;
+
+	descriptorWrites[5] = {};
+	descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[5].pNext = NULL;
+	descriptorWrites[5].dstSet = comp_desc_set[active_command_buffer_idx];
+	descriptorWrites[5].descriptorCount = 1;
+	descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	descriptorWrites[5].pBufferInfo = &index_count_buffer_info;
+	descriptorWrites[5].dstArrayElement = 0;
+	descriptorWrites[5].dstBinding = 5;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
 
