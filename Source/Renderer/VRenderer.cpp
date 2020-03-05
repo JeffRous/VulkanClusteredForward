@@ -166,6 +166,7 @@ void VulkanRenderer::CleanUp()
 	vkDestroyDescriptorPool(device, comp_desc_pool, nullptr);
 	vkDestroyDescriptorSetLayout(device, comp_desc_layout, nullptr);
 	vkDestroyPipelineLayout(device, comp_pipeline_layout, nullptr);
+	vkDestroyCommandPool(device, comp_command_pool, nullptr);
 	vkDestroyPipeline(device, comp_pipeline, nullptr);
 
 	vkDestroyShaderModule(device, frag_shader_module, nullptr);
@@ -384,6 +385,7 @@ void VulkanRenderer::CreateLogicDevice()
 	}
 
 	vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphics_queue);
+	vkGetDeviceQueue(device, indices.computeFamily.value(), 0, &comp_queue);
 }
 
 VkSurfaceFormatKHR VulkanRenderer::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
@@ -934,21 +936,10 @@ VkShaderModule VulkanRenderer::createShaderModule(const std::vector<char>& code)
 	return shaderModule;
 }
 
-void VulkanRenderer::CreateCompCommandBuffer()
-{
-	VkCommandBufferAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = command_pool;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
-
-	if (vkAllocateCommandBuffers(device, &allocInfo, &comp_command_buffer) != VK_SUCCESS) {
-		throw std::runtime_error("failed to allocate command buffers!");
-	}
-}
-
 void VulkanRenderer::CreateCompPipeline()
 {
+	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
+
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[6] = {
 		{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
 		{1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
@@ -1000,11 +991,28 @@ void VulkanRenderer::CreateCompPipeline()
 	if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 2, computePipelineCreateInfos, nullptr, &comp_pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create compute pipeline!");
 	}
+
+	// Separate command pool as queue family for compute may be different than graphics
+	VkCommandPoolCreateInfo cmdPoolInfo = {};
+	cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	cmdPoolInfo.queueFamilyIndex = indices.computeFamily.value();
+	cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	vkCreateCommandPool(device, &cmdPoolInfo, nullptr, &comp_command_pool);
+
+	// Command buffer
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = comp_command_pool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = 1;
+
+	if (vkAllocateCommandBuffers(device, &allocInfo, &comp_command_buffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate command buffers!");
+	}
 }
 
 void VulkanRenderer::InitializeClusteRendering()
 {
-	CreateCompCommandBuffer();
 	CreateCompPipeline();
 
 	/// create desc set pool for cluste shadering
@@ -1100,6 +1108,15 @@ void VulkanRenderer::ReleaseCompDescriptorSets()
 
 void VulkanRenderer::UpdateComputeDescriptorSet()
 {
+	vkQueueWaitIdle(comp_queue);
+
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+	vkBeginCommandBuffer(comp_command_buffer, &beginInfo);
+
+	vkCmdBindPipeline(comp_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline);
+
 	/// set descriptor sets
 	std::array<VkWriteDescriptorSet, 6> descriptorWrites = {};
 	descriptorWrites[0] = {};
@@ -1165,6 +1182,10 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
 
 	vkCmdBindDescriptorSets(comp_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline_layout, 0, 1, &comp_desc_set[active_command_buffer_idx], 0, nullptr);
+
+	vkCmdDispatch(comp_command_buffer, group_num.x, group_num.y, group_num.z);
+
+	vkEndCommandBuffer(comp_command_buffer);
 }
 
 void VulkanRenderer::CreateDepthResources()
@@ -1714,6 +1735,8 @@ void VulkanRenderer::ClearLight()
 
 void VulkanRenderer::RenderBegin()
 {
+	UpdateComputeDescriptorSet();
+
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 

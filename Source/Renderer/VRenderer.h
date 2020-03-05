@@ -178,7 +178,6 @@ private:
 
 	void InitializeClusteRendering();
 	void CreateCompPipeline();
-	void CreateCompCommandBuffer();
 
 	void CreateDepthResources();
 	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
@@ -270,6 +269,8 @@ private:
 	VkPipeline comp_pipeline;
 	VkDescriptorSet comp_desc_set[3];
 	VkCommandBuffer comp_command_buffer;
+	VkQueue comp_queue;
+	VkCommandPool comp_command_pool;
 
 	/// tile aabb
 	VkBuffer tile_aabbs_buffer;
