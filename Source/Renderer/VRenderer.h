@@ -266,11 +266,14 @@ private:
 	VkDescriptorPool comp_desc_pool;
 	VkDescriptorSetLayout comp_desc_layout;
 	VkPipelineLayout comp_pipeline_layout;
-	VkPipeline comp_pipeline;
+	VkPipeline comp_pipelines[2];
 	VkDescriptorSet comp_desc_set[3];
-	VkCommandBuffer comp_command_buffer;
+	VkCommandBuffer comp_command_buffers[2];
 	VkQueue comp_queue;
 	VkCommandPool comp_command_pool;
+	VkFence comp_wait_fence;
+	VkShaderModule comp_cluste_shader_module;
+	VkShaderModule cluste_cull_shader_module;
 
 	/// tile aabb
 	VkBuffer tile_aabbs_buffer;

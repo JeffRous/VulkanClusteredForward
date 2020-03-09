@@ -149,6 +149,7 @@ void VulkanRenderer::CleanUp()
 	vkDestroySemaphore(device, render_finished_semaphore, nullptr);
 	vkDestroySemaphore(device, image_available_semaphore, nullptr);
 	vkDestroyFence(device, in_flight_fence, nullptr);
+	vkDestroyFence(device, comp_wait_fence, nullptr);
 
 	vkDestroyCommandPool(device, command_pool, nullptr);
 	vkDestroyDescriptorSetLayout(device, desc_layout, nullptr);
@@ -165,9 +166,13 @@ void VulkanRenderer::CleanUp()
 	ReleaseCompDescriptorSets();
 	vkDestroyDescriptorPool(device, comp_desc_pool, nullptr);
 	vkDestroyDescriptorSetLayout(device, comp_desc_layout, nullptr);
-	vkDestroyPipelineLayout(device, comp_pipeline_layout, nullptr);
 	vkDestroyCommandPool(device, comp_command_pool, nullptr);
-	vkDestroyPipeline(device, comp_pipeline, nullptr);
+	vkDestroyPipeline(device, comp_pipelines[0], nullptr);
+	vkDestroyPipeline(device, comp_pipelines[1], nullptr);
+	vkDestroyPipelineLayout(device, comp_pipeline_layout, nullptr);
+
+	vkDestroyShaderModule(device, comp_cluste_shader_module, nullptr);
+	vkDestroyShaderModule(device, cluste_cull_shader_module, nullptr);
 
 	vkDestroyShaderModule(device, frag_shader_module, nullptr);
 	vkDestroyShaderModule(device, vert_shader_module, nullptr);
@@ -974,7 +979,7 @@ void VulkanRenderer::CreateCompPipeline()
 			0, 0,
 			{
 				VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_calc.spv")), "main", 0
+				0, 0, VK_SHADER_STAGE_COMPUTE_BIT, comp_cluste_shader_module = createShaderModule(Utils::readFile("Data/shader/cluste_calc.spv")), "main", 0
 			},
 			comp_pipeline_layout, 0, 0
 		},
@@ -983,12 +988,12 @@ void VulkanRenderer::CreateCompPipeline()
 			0, 0,
 			{
 				VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				0, 0, VK_SHADER_STAGE_COMPUTE_BIT, createShaderModule(Utils::readFile("Data/shader/cluste_culling.spv")), "main", 0
+				0, 0, VK_SHADER_STAGE_COMPUTE_BIT, cluste_cull_shader_module = createShaderModule(Utils::readFile("Data/shader/cluste_culling.spv")), "main", 0
 			},
 			comp_pipeline_layout, 0, 0
 		},
 	};
-	if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 2, computePipelineCreateInfos, nullptr, &comp_pipeline) != VK_SUCCESS) {
+	if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 2, computePipelineCreateInfos, nullptr, comp_pipelines) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create compute pipeline!");
 	}
 
@@ -1004,9 +1009,9 @@ void VulkanRenderer::CreateCompPipeline()
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = comp_command_pool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
+	allocInfo.commandBufferCount = 2;
 
-	if (vkAllocateCommandBuffers(device, &allocInfo, &comp_command_buffer) != VK_SUCCESS) {
+	if (vkAllocateCommandBuffers(device, &allocInfo, comp_command_buffers) != VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate command buffers!");
 	}
 }
@@ -1108,14 +1113,15 @@ void VulkanRenderer::ReleaseCompDescriptorSets()
 
 void VulkanRenderer::UpdateComputeDescriptorSet()
 {
-	vkQueueWaitIdle(comp_queue);
+	vkWaitForFences(device, 1, &comp_wait_fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+	vkResetFences(device, 1, &comp_wait_fence);
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-	vkBeginCommandBuffer(comp_command_buffer, &beginInfo);
+	vkBeginCommandBuffer(comp_command_buffers[0], &beginInfo);
 
-	vkCmdBindPipeline(comp_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline);
+	vkCmdBindPipeline(comp_command_buffers[0], VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipelines[0]);
 
 	/// set descriptor sets
 	std::array<VkWriteDescriptorSet, 6> descriptorWrites = {};
@@ -1181,11 +1187,18 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
 
-	vkCmdBindDescriptorSets(comp_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline_layout, 0, 1, &comp_desc_set[active_command_buffer_idx], 0, nullptr);
+	vkCmdBindDescriptorSets(comp_command_buffers[0], VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline_layout, 0, 1, &comp_desc_set[active_command_buffer_idx], 0, nullptr);
 
-	vkCmdDispatch(comp_command_buffer, group_num.x, group_num.y, group_num.z);
+	vkCmdDispatch(comp_command_buffers[0], group_num.x, group_num.y, group_num.z);
 
-	vkEndCommandBuffer(comp_command_buffer);
+	vkEndCommandBuffer(comp_command_buffers[0]);
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 2;
+	submitInfo.pCommandBuffers = comp_command_buffers;
+
+	vkQueueSubmit(comp_queue, 1, &submitInfo, comp_wait_fence);
 }
 
 void VulkanRenderer::CreateDepthResources()
@@ -1673,7 +1686,8 @@ void VulkanRenderer::CreateSemaphores()
 
 	if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &image_available_semaphore) != VK_SUCCESS ||
 		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &render_finished_semaphore) != VK_SUCCESS ||
-		vkCreateFence(device, &fenceInfo, nullptr, &in_flight_fence) != VK_SUCCESS) {
+		vkCreateFence(device, &fenceInfo, nullptr, &in_flight_fence) != VK_SUCCESS ||
+		vkCreateFence(device, &fenceInfo, nullptr, &comp_wait_fence) != VK_SUCCESS) {
 
 		throw std::runtime_error("failed to create semaphores!");
 	}
@@ -1735,6 +1749,16 @@ void VulkanRenderer::ClearLight()
 
 void VulkanRenderer::RenderBegin()
 {
+	/// set camera
+	if (camera != NULL)
+	{
+		camera->UpdateViewProject();
+
+		/// cluster compute parameter setting
+		ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
+		stv->inverseProjection = glm::inverse(*camera->GetProjectMatrix());
+	}
+
 	UpdateComputeDescriptorSet();
 
 	VkCommandBufferBeginInfo beginInfo = {};
@@ -1761,16 +1785,6 @@ void VulkanRenderer::RenderBegin()
 	vkCmdBeginRenderPass(command_buffers[active_command_buffer_idx], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	vkCmdBindPipeline(command_buffers[active_command_buffer_idx], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-
-	/// set camera
-	if (camera != NULL)
-	{
-		camera->UpdateViewProject();
-
-		/// cluster compute parameter setting
-		ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
-		stv->inverseProjection = glm::inverse(*camera->GetProjectMatrix());
-	}
 }
 
 void VulkanRenderer::RenderEnd()
