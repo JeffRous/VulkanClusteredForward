@@ -14,6 +14,10 @@
 #include "Renderer.h"
 
 #define MAX_LIGHT_NUM 16
+#define CLUSTE_X 16
+#define CLUSTE_Y 9
+#define CLUSTE_Z 24
+#define CLUSTE_NUM (CLUSTE_X * CLUSTE_Y * CLUSTE_Z)
 
 struct SwapChainSupportDetails {
 	VkSurfaceCapabilitiesKHR capabilities;
@@ -268,7 +272,7 @@ private:
 	VkPipelineLayout comp_pipeline_layout;
 	VkPipeline comp_pipelines[2];
 	VkDescriptorSet comp_desc_set[3];
-	VkCommandBuffer comp_command_buffers[2];
+	VkCommandBuffer comp_command_buffers[2*3];
 	VkQueue comp_queue;
 	VkCommandPool comp_command_pool;
 	VkFence comp_wait_fence;
@@ -310,6 +314,9 @@ private:
 	VkDeviceMemory index_count_buffer_memory;
 	void* index_count_buffer_data;
 	VkDescriptorBufferInfo index_count_buffer_info;
+
+	bool isClusteShading;
+	bool isIspc;
 };
 
 

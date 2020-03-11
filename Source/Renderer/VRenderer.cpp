@@ -32,6 +32,8 @@ const std::vector<const char*> deviceExtensions = {
 VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	:Renderer(win)
 {
+	isClusteShading = true;
+	isIspc = false;
 	last_command_buffer_idx = UINT_MAX;
 	CreateInstance();
 	CreateSurface();
@@ -41,7 +43,10 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
-	InitializeClusteRendering();
+
+	if( isClusteShading )
+		InitializeClusteRendering();
+
 	CreateCommandPool();
 	CreateDepthResources();
 	CreateFramebuffers();
@@ -163,16 +168,19 @@ void VulkanRenderer::CleanUp()
 	vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
 	vkDestroyRenderPass(device, render_pass, nullptr);
 
-	ReleaseCompDescriptorSets();
-	vkDestroyDescriptorPool(device, comp_desc_pool, nullptr);
-	vkDestroyDescriptorSetLayout(device, comp_desc_layout, nullptr);
-	vkDestroyCommandPool(device, comp_command_pool, nullptr);
-	vkDestroyPipeline(device, comp_pipelines[0], nullptr);
-	vkDestroyPipeline(device, comp_pipelines[1], nullptr);
-	vkDestroyPipelineLayout(device, comp_pipeline_layout, nullptr);
+	if (isClusteShading)
+	{
+		ReleaseCompDescriptorSets();
+		vkDestroyDescriptorPool(device, comp_desc_pool, nullptr);
+		vkDestroyDescriptorSetLayout(device, comp_desc_layout, nullptr);
+		vkDestroyCommandPool(device, comp_command_pool, nullptr);
+		vkDestroyPipeline(device, comp_pipelines[0], nullptr);
+		vkDestroyPipeline(device, comp_pipelines[1], nullptr);
+		vkDestroyPipelineLayout(device, comp_pipeline_layout, nullptr);
 
-	vkDestroyShaderModule(device, comp_cluste_shader_module, nullptr);
-	vkDestroyShaderModule(device, cluste_cull_shader_module, nullptr);
+		vkDestroyShaderModule(device, comp_cluste_shader_module, nullptr);
+		vkDestroyShaderModule(device, cluste_cull_shader_module, nullptr);
+	}
 
 	vkDestroyShaderModule(device, frag_shader_module, nullptr);
 	vkDestroyShaderModule(device, vert_shader_module, nullptr);
@@ -1009,7 +1017,7 @@ void VulkanRenderer::CreateCompPipeline()
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = comp_command_pool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 2;
+	allocInfo.commandBufferCount = 2 * swap_chain_images.size();
 
 	if (vkAllocateCommandBuffers(device, &allocInfo, comp_command_buffers) != VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate command buffers!");
@@ -1041,15 +1049,15 @@ void VulkanRenderer::AllocateCompDescriptorSets(VkDescriptorSet* descSets)
 void VulkanRenderer::CreateCompDescriptorSets()
 {
 	/// set computer number and tile size in screen space
-	tile_size.x = Application::Inst()->GetWidth() / 20;
-	tile_size.y = Application::Inst()->GetHeight() / 20;
-	group_num = glm::uvec3(20, 20, 10);
+	tile_size.x = Application::Inst()->GetWidth() / CLUSTE_X;
+	tile_size.y = Application::Inst()->GetHeight() / CLUSTE_Y;
+	group_num = glm::uvec3(CLUSTE_X, CLUSTE_Y, CLUSTE_Z);
 
 	/// allocate desc sets
 	AllocateCompDescriptorSets(comp_desc_set);
 
 	/// tile aabb
-	VkDeviceSize bufferSize = sizeof(VolumeTileAABB) * 20 * 20 * 10;
+	VkDeviceSize bufferSize = sizeof(VolumeTileAABB) * CLUSTE_NUM;
 	CreateComputeBuffer(&tile_aabbs_buffer_data, (uint32_t)bufferSize, tile_aabbs_buffer, tile_aabbs_buffer_memory);
 	tile_aabbs_buffer_info.buffer = tile_aabbs_buffer;
 	tile_aabbs_buffer_info.offset = 0;
@@ -1073,14 +1081,14 @@ void VulkanRenderer::CreateCompDescriptorSets()
 	light_datas_buffer_info.range = bufferSize;
 
 	/// light indexes
-	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * 20 * 20 * 10;
+	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * CLUSTE_NUM;
 	CreateComputeBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, light_indexes_buffer, light_indexes_buffer_memory);
 	light_indexes_buffer_info.buffer = light_indexes_buffer;
 	light_indexes_buffer_info.offset = 0;
 	light_indexes_buffer_info.range = bufferSize;
 
 	/// light grids
-	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * 20 * 20 * 10;
+	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * CLUSTE_NUM;
 	CreateComputeBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
 	light_grids_buffer_info.buffer = light_grids_buffer;
 	light_grids_buffer_info.offset = 0;
@@ -1115,13 +1123,6 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 {
 	vkWaitForFences(device, 1, &comp_wait_fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
 	vkResetFences(device, 1, &comp_wait_fence);
-
-	VkCommandBufferBeginInfo beginInfo = {};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-	vkBeginCommandBuffer(comp_command_buffers[0], &beginInfo);
-
-	vkCmdBindPipeline(comp_command_buffers[0], VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipelines[0]);
 
 	/// set descriptor sets
 	std::array<VkWriteDescriptorSet, 6> descriptorWrites = {};
@@ -1187,11 +1188,32 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
 
-	vkCmdBindDescriptorSets(comp_command_buffers[0], VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline_layout, 0, 1, &comp_desc_set[active_command_buffer_idx], 0, nullptr);
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-	vkCmdDispatch(comp_command_buffers[0], group_num.x, group_num.y, group_num.z);
+	/// comp 1
+	int command_buffer_idx = active_command_buffer_idx * 2 + 0;
+	vkBeginCommandBuffer(comp_command_buffers[command_buffer_idx], &beginInfo);
 
-	vkEndCommandBuffer(comp_command_buffers[0]);
+	vkCmdBindPipeline(comp_command_buffers[command_buffer_idx], VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipelines[0]);
+
+	vkCmdBindDescriptorSets(comp_command_buffers[command_buffer_idx], VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline_layout, 0, 1, &comp_desc_set[active_command_buffer_idx], 0, nullptr);
+
+	vkCmdDispatch(comp_command_buffers[command_buffer_idx], group_num.x, group_num.y, group_num.z);
+
+	vkEndCommandBuffer(comp_command_buffers[command_buffer_idx]);
+
+	/// comp 2
+	command_buffer_idx = active_command_buffer_idx * 2 + 1;
+	vkBeginCommandBuffer(comp_command_buffers[command_buffer_idx], &beginInfo);
+
+	vkCmdBindPipeline(comp_command_buffers[command_buffer_idx], VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipelines[1]);
+
+	vkCmdBindDescriptorSets(comp_command_buffers[command_buffer_idx], VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline_layout, 0, 1, &comp_desc_set[active_command_buffer_idx], 0, nullptr);
+
+	vkCmdDispatch(comp_command_buffers[command_buffer_idx], 1, 1, 6);
+
+	vkEndCommandBuffer(comp_command_buffers[command_buffer_idx]);
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1740,6 +1762,11 @@ void VulkanRenderer::AddLight(PointLight* light)
 
 	int idx = light_infos.size() - 1;
 	memcpy(light_uniform_buffer_datas[idx], &lightData, sizeof(PointLightData));
+
+	if (isClusteShading)
+	{	// for clust shading compute data
+		memcpy((unsigned char*)light_datas_buffer_data + idx * sizeof(PointLightData), &lightData, sizeof(PointLightData));
+	}
 }
 
 void VulkanRenderer::ClearLight()
@@ -1755,11 +1782,17 @@ void VulkanRenderer::RenderBegin()
 		camera->UpdateViewProject();
 
 		/// cluster compute parameter setting
-		ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
-		stv->inverseProjection = glm::inverse(*camera->GetProjectMatrix());
+		if (isClusteShading)
+		{
+			ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
+			stv->inverseProjection = glm::inverse(*camera->GetProjectMatrix());
+		}
 	}
 
-	UpdateComputeDescriptorSet();
+	if (isClusteShading)
+	{
+		UpdateComputeDescriptorSet();
+	}
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

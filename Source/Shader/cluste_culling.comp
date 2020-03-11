@@ -74,7 +74,7 @@ void main(){
         //Prevent overflow by clamping to last light which is always null
         lightIndex = min(lightIndex, lightCount);
 
-        //Populating shared light array
+        //Populating shared light array : pre-setting and utilize the multi-core of gpu!
         sharedLights[gl_LocalInvocationIndex] = pointLight[lightIndex];
         barrier();
 
