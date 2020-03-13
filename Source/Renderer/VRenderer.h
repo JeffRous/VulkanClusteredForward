@@ -66,6 +66,7 @@ struct PointLightData {
 	glm::vec3 pos;
 	float radius;
 	glm::vec3 color;
+	unsigned int enabled;
 	float ambient_intensity;
 	float diffuse_intensity;
 	float specular_intensity;
@@ -238,6 +239,7 @@ private:
 	std::vector<VkCommandBuffer> command_buffers;
 	VkSemaphore image_available_semaphore;
 	VkSemaphore render_finished_semaphore;
+	VkSemaphore compute_finished_semaphore;
 	VkFence in_flight_fence;
 	VkImage depth_image;
 	VkDeviceMemory depth_image_memory;

@@ -151,6 +151,7 @@ void VulkanRenderer::CleanUp()
 	vkDestroyImage(device, depth_image, nullptr);
 	vkFreeMemory(device, depth_image_memory, nullptr);
 
+	vkDestroySemaphore(device, compute_finished_semaphore, nullptr);
 	vkDestroySemaphore(device, render_finished_semaphore, nullptr);
 	vkDestroySemaphore(device, image_available_semaphore, nullptr);
 	vkDestroyFence(device, in_flight_fence, nullptr);
@@ -955,7 +956,7 @@ void VulkanRenderer::CreateCompPipeline()
 
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[6] = {
 		{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
-		{1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
+		{1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
 		{2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
 		{3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
 		{4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, 0},
@@ -1065,7 +1066,7 @@ void VulkanRenderer::CreateCompDescriptorSets()
 
 	/// screen to view
 	bufferSize = sizeof(ScreenToView);
-	CreateUniformBuffer(&screen_to_view_buffer_data, (uint32_t)bufferSize, screen_to_view_buffer, screen_to_view_buffer_memory);
+	CreateComputeBuffer(&screen_to_view_buffer_data, (uint32_t)bufferSize, screen_to_view_buffer, screen_to_view_buffer_memory);
 	ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
 	stv->screenDimensions = glm::uvec2(Application::Inst()->GetWidth(), Application::Inst()->GetHeight());
 	stv->tileSizes = glm::uvec4(tile_size, 0, 0);
@@ -1088,7 +1089,7 @@ void VulkanRenderer::CreateCompDescriptorSets()
 	light_indexes_buffer_info.range = bufferSize;
 
 	/// light grids
-	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * CLUSTE_NUM;
+	bufferSize = sizeof(LightGrid) * CLUSTE_NUM;
 	CreateComputeBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
 	light_grids_buffer_info.buffer = light_grids_buffer;
 	light_grids_buffer_info.offset = 0;
@@ -1141,7 +1142,7 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	descriptorWrites[1].pNext = NULL;
 	descriptorWrites[1].dstSet = comp_desc_set[active_command_buffer_idx];
 	descriptorWrites[1].descriptorCount = 1;
-	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	descriptorWrites[1].pBufferInfo = &screen_to_view_buffer_info;
 	descriptorWrites[1].dstArrayElement = 0;
 	descriptorWrites[1].dstBinding = 1;
@@ -1215,12 +1216,18 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 
 	vkEndCommandBuffer(comp_command_buffers[command_buffer_idx]);
 
+	VkSemaphore signalSemaphores[] = { compute_finished_semaphore };
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.commandBufferCount = 2;
-	submitInfo.pCommandBuffers = comp_command_buffers;
+	submitInfo.pCommandBuffers = &comp_command_buffers[active_command_buffer_idx * 2];
+	submitInfo.pSignalSemaphores = signalSemaphores;
+	submitInfo.signalSemaphoreCount = 1;
 
-	vkQueueSubmit(comp_queue, 1, &submitInfo, comp_wait_fence);
+	if (vkQueueSubmit(comp_queue, 1, &submitInfo, comp_wait_fence) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to submit compute command buffer!");
+	}
 }
 
 void VulkanRenderer::CreateDepthResources()
@@ -1670,7 +1677,7 @@ void VulkanRenderer::CreateCompDescriptorSetsPool()
 	std::array<VkDescriptorPoolSize, 6> typeCounts = {};
 	typeCounts[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	typeCounts[0].descriptorCount = swap_chain_images.size();
-	typeCounts[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	typeCounts[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	typeCounts[1].descriptorCount = swap_chain_images.size();
 	typeCounts[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	typeCounts[2].descriptorCount = swap_chain_images.size();
@@ -1708,6 +1715,7 @@ void VulkanRenderer::CreateSemaphores()
 
 	if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &image_available_semaphore) != VK_SUCCESS ||
 		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &render_finished_semaphore) != VK_SUCCESS ||
+		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &compute_finished_semaphore) != VK_SUCCESS ||
 		vkCreateFence(device, &fenceInfo, nullptr, &in_flight_fence) != VK_SUCCESS ||
 		vkCreateFence(device, &fenceInfo, nullptr, &comp_wait_fence) != VK_SUCCESS) {
 
@@ -1752,6 +1760,7 @@ void VulkanRenderer::AddLight(PointLight* light)
 	lightData.color = light->GetColor();
 	lightData.pos = light->GetPosition();
 	lightData.radius = light->GetRadius();
+	lightData.enabled = 1;
 	lightData.ambient_intensity = light->GetAmbientIntensity();
 	lightData.diffuse_intensity = light->GetDiffuseIntensity();
 	lightData.specular_intensity = light->GetSpecularIntensity();
@@ -1860,9 +1869,9 @@ void VulkanRenderer::Flush()
 	VkSemaphore signalSemaphores[] = { render_finished_semaphore };
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	VkSemaphore waitSemaphores[] = { image_available_semaphore };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.waitSemaphoreCount = 1;
+	VkSemaphore waitSemaphores[2] = { image_available_semaphore, compute_finished_semaphore };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };	/// in the stage wait the sema
+	submitInfo.waitSemaphoreCount = 2;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
@@ -1870,7 +1879,8 @@ void VulkanRenderer::Flush()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fence) != VK_SUCCESS) {
+	VkResult ret;
+	if ((ret = vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fence)) != VK_SUCCESS) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 

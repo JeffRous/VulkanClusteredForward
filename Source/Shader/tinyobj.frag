@@ -21,6 +21,7 @@ layout(std140, binding = 2) uniform PointLightData
     vec3 pos;
 	float radius;
 	vec3 color;
+    uint enabled;
     float ambient_intensity;
 	float diffuse_intensity;
 	float specular_intensity;

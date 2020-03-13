@@ -5,6 +5,7 @@ struct PointLight{
     vec3 pos;
 	float radius;
 	vec3 color;
+    uint enabled;
     float ambient_intensity;
 	float diffuse_intensity;
 	float specular_intensity;
@@ -80,12 +81,12 @@ void main(){
 
         //Iterating within the current batch of lights
         for( uint light = 0; light < threadCount; ++light){
-            //if( sharedLights[light].enabled  == 1){
+            if(sharedLights[light].enabled  == 1){
                 if( testSphereAABB(light, tileIndex) ){
                     visibleLightIndices[visibleLightCount] = batch * threadCount + light;
                     visibleLightCount += 1;
                 }
-            //}
+            }
         }
     }
 
