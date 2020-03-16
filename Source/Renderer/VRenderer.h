@@ -53,6 +53,11 @@ struct TransformData {
 	glm::mat4x4 proj;
 	glm::mat4x4 proj_view;
 	glm::vec3 cam_pos;
+	glm::uvec4 tileSizes;
+	float zNear;
+	float zFar;
+	float scale;
+	float bias;
 };
 
 /// material flag for shader
@@ -87,6 +92,8 @@ struct ScreenToView
 	glm::mat4 inverseProjection;
 	glm::uvec4 tileSizes;
 	glm::uvec2 screenDimensions;
+	float zNear;
+	float zFar;
 };
 
 /// light grid
@@ -267,7 +274,7 @@ private:
 	std::vector<void*> light_uniform_buffer_datas;
 
 	/// cluste calculate
-	glm::uvec2 tile_size;	/// ss width height
+	unsigned int tile_size_x;	/// ss width height
 	glm::uvec3 group_num;
 	VkDescriptorPool comp_desc_pool;
 	VkDescriptorSetLayout comp_desc_layout;

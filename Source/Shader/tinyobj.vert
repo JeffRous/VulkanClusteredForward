@@ -8,6 +8,11 @@ layout (std140, binding = 0) uniform TransformData {
     mat4 proj;
     mat4 proj_view;
     vec3 cam_pos;
+    uvec4 tileSizes;
+    float zNear;
+    float zFar;
+    float scale;
+    float bias;
 } transform;
 
 layout(std140, binding = 1) uniform MaterialData

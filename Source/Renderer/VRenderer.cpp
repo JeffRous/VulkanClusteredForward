@@ -44,6 +44,10 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateRenderPass();
 	CreateGraphicsPipeline();
 
+	/// set computer number and tile size in screen space
+	tile_size_x = (unsigned int)std::ceilf(Application::Inst()->GetWidth() / (float)CLUSTE_X);;
+	group_num = glm::uvec3(CLUSTE_X, CLUSTE_Y, CLUSTE_Z);
+
 	if( isClusteShading )
 		InitializeClusteRendering();
 
@@ -1049,11 +1053,6 @@ void VulkanRenderer::AllocateCompDescriptorSets(VkDescriptorSet* descSets)
 
 void VulkanRenderer::CreateCompDescriptorSets()
 {
-	/// set computer number and tile size in screen space
-	tile_size.x = Application::Inst()->GetWidth() / CLUSTE_X;
-	tile_size.y = Application::Inst()->GetHeight() / CLUSTE_Y;
-	group_num = glm::uvec3(CLUSTE_X, CLUSTE_Y, CLUSTE_Z);
-
 	/// allocate desc sets
 	AllocateCompDescriptorSets(comp_desc_set);
 
@@ -1069,7 +1068,7 @@ void VulkanRenderer::CreateCompDescriptorSets()
 	CreateComputeBuffer(&screen_to_view_buffer_data, (uint32_t)bufferSize, screen_to_view_buffer, screen_to_view_buffer_memory);
 	ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
 	stv->screenDimensions = glm::uvec2(Application::Inst()->GetWidth(), Application::Inst()->GetHeight());
-	stv->tileSizes = glm::uvec4(tile_size, 0, 0);
+	stv->tileSizes = glm::uvec4(group_num, tile_size_x);
 	screen_to_view_buffer_info.buffer = screen_to_view_buffer;
 	screen_to_view_buffer_info.offset = 0;
 	screen_to_view_buffer_info.range = bufferSize;
@@ -1581,8 +1580,14 @@ void VulkanRenderer::SetProjViewMatrix(glm::mat4x4& mtx)
 
 void VulkanRenderer::SetCamPos(glm::vec3& pos)
 {
+	float zNear = camera->GetNearDistance();
+	float zFar = camera->GetFarDistance();
 	TransformData* transData = (TransformData*)transform_uniform_buffer_data;
 	memcpy(&transData->cam_pos, &pos, sizeof(glm::vec3));
+	transData->zNear = zNear;
+	transData->zFar = zFar;
+	transData->scale = (float)CLUSTE_Z / std::log2f(zFar / zNear);
+	transData->bias = -((float)CLUSTE_Z * std::log2f(zNear) / std::log2f(zFar / zNear));
 }
 
 void VulkanRenderer::SetTexture(Texture* tex)
@@ -1606,9 +1611,13 @@ void VulkanRenderer::CreateUniformBuffers()
 	/// transform uniform buffer
 	VkDeviceSize bufferSize = sizeof(TransformData);
 	CreateUniformBuffer(&transform_uniform_buffer_data, (uint32_t)bufferSize, transform_uniform_buffer, transform_uniform_buffer_memory);
+
 	transform_uniform_buffer_info.buffer = transform_uniform_buffer;
 	transform_uniform_buffer_info.offset = 0;
 	transform_uniform_buffer_info.range = bufferSize;
+
+	TransformData* transData = (TransformData*)transform_uniform_buffer_data;
+	transData->tileSizes = glm::uvec4(group_num, tile_size_x);
 
 	for (int i = 0; i < MAX_LIGHT_NUM; i++)
 	{
@@ -1795,6 +1804,8 @@ void VulkanRenderer::RenderBegin()
 		{
 			ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
 			stv->inverseProjection = glm::inverse(*camera->GetProjectMatrix());
+			stv->zNear = camera->GetNearDistance();
+			stv->zFar = camera->GetFarDistance();
 		}
 	}
 

@@ -15,6 +15,8 @@ public:
 	void SetFov(float f);	// degree
 	void SetNearDistance(float n);
 	void SetFarDistance(float f);
+	float GetNearDistance() { return near_clamp; }
+	float GetFarDistance() { return far_clamp; }
 
 	virtual glm::mat4x4* UpdateMatrix();
 

@@ -1,6 +1,12 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #define MAX_LIGHT_NUM 16
+
+struct LightGrid{
+    uint offset;
+    uint count;
+};
+
 layout (std140, binding = 0) uniform TransformData {
     mat4 mvp;
     mat4 model;
@@ -8,6 +14,11 @@ layout (std140, binding = 0) uniform TransformData {
     mat4 proj;
     mat4 proj_view;
     vec3 cam_pos;
+    uvec4 tileSizes;
+    float zNear;
+    float zFar;
+    float scale;
+    float bias;
 } transform;
 
 layout(std140, binding = 1) uniform MaterialData
@@ -33,6 +44,13 @@ layout(std140, binding = 2) uniform PointLightData
 layout(binding = 3) uniform sampler2D albedoSampler;
 layout(binding = 4) uniform sampler2D normalSampler;
 
+layout (std430, binding = 5) buffer lightIndexSSBO{
+    uint globalLightIndexList[];
+};
+layout (std430, binding = 6) buffer lightGridSSBO{
+    LightGrid lightGrid[];
+};
+
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec3 fragTexCoord;
 layout(location = 2) in vec3 fragPos;
@@ -42,8 +60,21 @@ layout(location = 5) in vec3 tanLightPos[16];
 
 layout(location = 0) out vec4 outColor;
 
+float linearDepth(float depthSample){
+    float depthRange = 2.0 * depthSample - 1.0;
+    float linear = 2.0 * transform.zNear * transform.zFar / (transform.zFar + transform.zNear - depthRange * (transform.zFar - transform.zNear));
+    return linear;
+}
+
 void main() {
     outColor = vec4(0,0,0,1);
+
+    uint zTile = uint(max(log2(linearDepth(gl_FragCoord.z)) * transform.scale + transform.bias, 0.0));
+    uvec3 tiles = uvec3( uvec2( gl_FragCoord.xy / transform.tileSizes[3] ), zTile);
+    uint tileIndex = tiles.x +
+                     transform.tileSizes.x * tiles.y +
+                     (transform.tileSizes.x * transform.tileSizes.y) * tiles.z;
+
     for(int i = 0; i < MAX_LIGHT_NUM; i++)
     {
         // diffuse
