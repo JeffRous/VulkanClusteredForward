@@ -896,7 +896,21 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	samplerLayoutBinding1.pImmutableSamplers = nullptr;
 	samplerLayoutBinding1.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	std::array<VkDescriptorSetLayoutBinding, 5> bindings = { layoutBinding, layoutBinding1, layoutBinding2, samplerLayoutBinding, samplerLayoutBinding1 };
+	VkDescriptorSetLayoutBinding lightIndexLayoutBinding = {};
+	lightIndexLayoutBinding.binding = 5;
+	lightIndexLayoutBinding.descriptorCount = 1;
+	lightIndexLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	lightIndexLayoutBinding.pImmutableSamplers = nullptr;
+	lightIndexLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutBinding lightGridLayoutBinding = {};
+	lightGridLayoutBinding.binding = 6;
+	lightGridLayoutBinding.descriptorCount = 1;
+	lightGridLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	lightGridLayoutBinding.pImmutableSamplers = nullptr;
+	lightGridLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	std::array<VkDescriptorSetLayoutBinding, 7> bindings = { layoutBinding, layoutBinding1, layoutBinding2, samplerLayoutBinding, samplerLayoutBinding1,lightIndexLayoutBinding, lightGridLayoutBinding };
 	VkDescriptorSetLayoutCreateInfo descriptorLayout = {};
 	descriptorLayout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	descriptorLayout.pNext = NULL;
@@ -1493,7 +1507,7 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 	VkDescriptorSet* descSets = mat->GetDescriptorSets();
 	if (!mat->IsDescSetUpdated())
 	{
-		std::array<VkWriteDescriptorSet, 5> descriptorWrites = {};
+		std::array<VkWriteDescriptorSet, 7> descriptorWrites = {};
 		descriptorWrites[0] = {};
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[0].pNext = NULL;
@@ -1539,6 +1553,26 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorWrites[4].descriptorCount = 1;
 		descriptorWrites[4].pImageInfo = normal_image_info;
+
+		descriptorWrites[5] = {};
+		descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[5].pNext = NULL;
+		descriptorWrites[5].dstSet = descSets[active_command_buffer_idx];
+		descriptorWrites[5].descriptorCount = 1;
+		descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		descriptorWrites[5].pBufferInfo = &light_indexes_buffer_info;
+		descriptorWrites[5].dstArrayElement = 0;
+		descriptorWrites[5].dstBinding = 5;
+
+		descriptorWrites[6] = {};
+		descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[6].pNext = NULL;
+		descriptorWrites[6].dstSet = descSets[active_command_buffer_idx];
+		descriptorWrites[6].descriptorCount = 1;
+		descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		descriptorWrites[6].pBufferInfo = &light_grids_buffer_info;
+		descriptorWrites[6].dstArrayElement = 0;
+		descriptorWrites[6].dstBinding = 6;
 
 		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
 
@@ -1641,7 +1675,7 @@ void VulkanRenderer::CreateUniformBuffers()
 
 void VulkanRenderer::CreateDescriptorSetsPool()
 {
-	std::array<VkDescriptorPoolSize, 5> typeCounts = {};
+	std::array<VkDescriptorPoolSize, 7> typeCounts = {};
 	typeCounts[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	typeCounts[0].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
 	typeCounts[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1652,6 +1686,10 @@ void VulkanRenderer::CreateDescriptorSetsPool()
 	typeCounts[3].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
 	typeCounts[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	typeCounts[4].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
+	typeCounts[5].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[5].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
+	typeCounts[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[6].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
 
 	VkDescriptorPoolCreateInfo descriptorPool = {};
 	descriptorPool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
