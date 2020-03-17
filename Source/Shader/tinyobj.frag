@@ -44,10 +44,10 @@ layout(std140, binding = 2) uniform PointLightData
 layout(binding = 3) uniform sampler2D albedoSampler;
 layout(binding = 4) uniform sampler2D normalSampler;
 
-layout (std430, binding = 5) buffer lightIndexSSBO{
+layout (std430, binding = 5) readonly buffer lightIndexSSBO{
     uint globalLightIndexList[];
 };
-layout (std430, binding = 6) buffer lightGridSSBO{
+layout (std430, binding = 6) readonly buffer lightGridSSBO{
     LightGrid lightGrid[];
 };
 
@@ -75,8 +75,12 @@ void main() {
                      transform.tileSizes.x * tiles.y +
                      (transform.tileSizes.x * transform.tileSizes.y) * tiles.z;
 
-    for(int i = 0; i < MAX_LIGHT_NUM; i++)
+    uint offset = lightGrid[tileIndex].offset;
+    uint visibleLightCount = lightGrid[tileIndex].count;
+    for(int idx = 0; idx < visibleLightCount; idx++)
     {
+        uint i = globalLightIndexList[offset + idx];
+
         // diffuse
         vec3 albedo;
         if (material.has_albedo_map > 0)
