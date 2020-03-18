@@ -90,6 +90,7 @@ struct VolumeTileAABB {
 struct ScreenToView
 {
 	glm::mat4 inverseProjection;
+	glm::mat4 viewMatrix;
 	glm::uvec4 tileSizes;
 	glm::uvec2 screenDimensions;
 	float zNear;

@@ -1840,8 +1840,13 @@ void VulkanRenderer::RenderBegin()
 		/// cluster compute parameter setting
 		if (isClusteShading)
 		{
+			glm::mat4x4 clipMtx = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, -1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f);
 			ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
-			stv->inverseProjection = glm::inverse(*camera->GetProjectMatrix());
+			stv->inverseProjection = glm::inverse(clipMtx * (*camera->GetProjectMatrix()));
+			stv->viewMatrix = *camera->GetViewMatrix();
 			stv->zNear = camera->GetNearDistance();
 			stv->zFar = camera->GetFarDistance();
 		}
