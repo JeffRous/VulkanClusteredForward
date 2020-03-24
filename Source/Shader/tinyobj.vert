@@ -33,6 +33,7 @@ layout(std140, binding = 2) uniform PointLightData
     float attenuation_constant;
 	float attenuation_linear;
 	float attenuation_exp;
+    vec2 padding;
 } pointLight[MAX_LIGHT_NUM];
 
 layout(location = 0) in vec4 inPosition;

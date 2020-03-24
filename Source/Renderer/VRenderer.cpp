@@ -1138,6 +1138,30 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	vkWaitForFences(device, 1, &comp_wait_fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
 	vkResetFences(device, 1, &comp_wait_fence);
 
+	VolumeTileAABB* volumnAABBs = (VolumeTileAABB*)tile_aabbs_buffer_data;
+	for (int i = 0; i < CLUSTE_NUM; i++)
+	{
+		VolumeTileAABB* volumnAABB = volumnAABBs + i;
+		//if (i == CLUSTE_NUM - 1)
+		{
+			int ciddebug = 1;
+		}
+	}
+
+	/*LightGrid* lightGrids = (LightGrid*)light_grids_buffer_data;
+	glm::uint* lightIndexs = (glm::uint*)light_indexes_buffer_data;
+	for (int i = 0; i < CLUSTE_NUM; i++)
+	{
+		LightGrid* lightGrid = lightGrids + i;
+		glm::uint* lightIndex = lightIndexs + lightGrid->offset;
+		if (lightGrid->count != 1)
+		{
+			int ciddebug = 0;
+			ciddebug = 1;
+		}
+	}
+	memset(light_grids_buffer_data, 0, sizeof(lightGrids) * CLUSTE_NUM);*/
+
 	/// set descriptor sets
 	std::array<VkWriteDescriptorSet, 6> descriptorWrites = {};
 	descriptorWrites[0] = {};
