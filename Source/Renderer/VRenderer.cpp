@@ -1139,28 +1139,24 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	vkResetFences(device, 1, &comp_wait_fence);
 
 	VolumeTileAABB* volumnAABBs = (VolumeTileAABB*)tile_aabbs_buffer_data;
-	for (int i = 0; i < CLUSTE_NUM; i++)
-	{
-		VolumeTileAABB* volumnAABB = volumnAABBs + i;
-		//if (i == CLUSTE_NUM - 1)
-		{
-			int ciddebug = 1;
-		}
-	}
-
-	/*LightGrid* lightGrids = (LightGrid*)light_grids_buffer_data;
+	LightGrid* lightGrids = (LightGrid*)light_grids_buffer_data;
 	glm::uint* lightIndexs = (glm::uint*)light_indexes_buffer_data;
 	for (int i = 0; i < CLUSTE_NUM; i++)
 	{
 		LightGrid* lightGrid = lightGrids + i;
 		glm::uint* lightIndex = lightIndexs + lightGrid->offset;
-		if (lightGrid->count != 1)
+		if (i == 0)
 		{
-			int ciddebug = 0;
-			ciddebug = 1;
+			printf("total light count(%d) offset(%d) for cluste(%d):", lightGrid->count, lightGrid->offset, i);
+			for (int j = 0; j < lightGrid->count; j++)
+			{
+				printf("%d, ", *(lightIndex + j));
+			}
+			printf("\n");
+			VolumeTileAABB* volumnAABB = volumnAABBs + i;
+			printf("real light min(%d) offset(%d)\n", (int)volumnAABB->minPoint[3], (int)volumnAABB->maxPoint[3]);
 		}
 	}
-	memset(light_grids_buffer_data, 0, sizeof(lightGrids) * CLUSTE_NUM);*/
 
 	/// set descriptor sets
 	std::array<VkWriteDescriptorSet, 6> descriptorWrites = {};
@@ -1251,8 +1247,8 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 
 	vkCmdDispatch(comp_command_buffers[command_buffer_idx], 1, 1, 6);
 
-	vkEndCommandBuffer(comp_command_buffers[command_buffer_idx]);
-
+	vkEndCommandBuffer(comp_command_buffers[command_buffer_idx]);	
+	
 	VkSemaphore signalSemaphores[] = { compute_finished_semaphore };
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

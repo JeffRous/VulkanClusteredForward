@@ -1,4 +1,4 @@
-#version 430 core
+#version 450 core
 layout(local_size_x = 1, local_size_y = 1) in;
 
 //ssbo initialization
@@ -6,7 +6,7 @@ struct VolumeTileAABB{
     vec4 minPoint;
     vec4 maxPoint;
 };
-layout (std430, binding = 0) buffer clusterAABB{
+layout (std140, binding = 0) buffer clusterAABB{
     VolumeTileAABB cluster[];
 };
 layout (std430, binding = 1) buffer screenToView{
