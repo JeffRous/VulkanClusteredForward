@@ -108,13 +108,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.1.121.2\Include;C:\Users\xinghuan\Documents\Libs\glfw-3.3.bin.WIN64\include;C:\Users\xinghuan\Documents\Libs\glm;ThirdParty/tinyobjloader;Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.2.131.2\Include;C:\Work\thirdparty\glfw-3.3.2.bin.WIN64\include;C:\Work\thirdparty\glm;ThirdParty/tinyobjloader;Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.1.121.2\Lib;C:\Users\xinghuan\Documents\Libs\glfw-3.3.bin.WIN64\lib-vc2017;C:\Users\xinghuan\Documents\Projects\VulkanClusteredForward\ThirdParty\tinyobjloader\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.131.2\Lib;C:\Work\thirdparty\glfw-3.3.2.bin.WIN64\lib-vc2017;C:\Users\JD DIY\Documents\GitHub\VulkanClusteredForward\ThirdParty\tinyobjloader\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;glfw3.lib;tinyobjloader.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>MSVCRT.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
