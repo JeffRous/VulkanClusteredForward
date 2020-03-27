@@ -42,15 +42,15 @@ layout(std140, binding = 2) uniform PointLightData
     vec2 padding;
 } pointLight[MAX_LIGHT_NUM];
 
-layout(binding = 3) uniform sampler2D albedoSampler;
-layout(binding = 4) uniform sampler2D normalSampler;
-
-layout (std430, binding = 5) readonly buffer lightIndexSSBO{
+layout (std430, binding = 3) readonly buffer lightIndexSSBO{
     uint globalLightIndexList[];
 };
-layout (std430, binding = 6) readonly buffer lightGridSSBO{
+layout (std430, binding = 4) readonly buffer lightGridSSBO{
     LightGrid lightGrid[];
 };
+
+layout(binding = 5) uniform sampler2D albedoSampler;
+layout(binding = 6) uniform sampler2D normalSampler;
 
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec3 fragTexCoord;

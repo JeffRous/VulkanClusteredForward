@@ -286,7 +286,11 @@ bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device)
 
 QueueFamilyIndices VulkanRenderer::FindQueueFamilies(VkPhysicalDevice device)
 {
-	QueueFamilyIndices indices;
+	static QueueFamilyIndices indices;
+	if (indices.isComplete())
+	{
+		return indices;
+	}
 
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
@@ -881,34 +885,34 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	layoutBinding2.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 	layoutBinding2.pImmutableSamplers = NULL;
 
-	/// sampler layout
-	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
-	samplerLayoutBinding.binding = 3;
-	samplerLayoutBinding.descriptorCount = 1;
-	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.pImmutableSamplers = nullptr;
-	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	VkDescriptorSetLayoutBinding samplerLayoutBinding1 = {};
-	samplerLayoutBinding1.binding = 4;
-	samplerLayoutBinding1.descriptorCount = 1;
-	samplerLayoutBinding1.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding1.pImmutableSamplers = nullptr;
-	samplerLayoutBinding1.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
 	VkDescriptorSetLayoutBinding lightIndexLayoutBinding = {};
-	lightIndexLayoutBinding.binding = 5;
+	lightIndexLayoutBinding.binding = 3;
 	lightIndexLayoutBinding.descriptorCount = 1;
 	lightIndexLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	lightIndexLayoutBinding.pImmutableSamplers = nullptr;
 	lightIndexLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	VkDescriptorSetLayoutBinding lightGridLayoutBinding = {};
-	lightGridLayoutBinding.binding = 6;
+	lightGridLayoutBinding.binding = 4;
 	lightGridLayoutBinding.descriptorCount = 1;
 	lightGridLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	lightGridLayoutBinding.pImmutableSamplers = nullptr;
 	lightGridLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	/// sampler layout
+	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
+	samplerLayoutBinding.binding = 5;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.pImmutableSamplers = nullptr;
+	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutBinding samplerLayoutBinding1 = {};
+	samplerLayoutBinding1.binding = 6;
+	samplerLayoutBinding1.descriptorCount = 1;
+	samplerLayoutBinding1.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding1.pImmutableSamplers = nullptr;
+	samplerLayoutBinding1.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	std::array<VkDescriptorSetLayoutBinding, 7> bindings = { layoutBinding, layoutBinding1, layoutBinding2, samplerLayoutBinding, samplerLayoutBinding1,lightIndexLayoutBinding, lightGridLayoutBinding };
 	VkDescriptorSetLayoutCreateInfo descriptorLayout = {};
@@ -1072,14 +1076,14 @@ void VulkanRenderer::CreateCompDescriptorSets()
 
 	/// tile aabb
 	VkDeviceSize bufferSize = sizeof(VolumeTileAABB) * CLUSTE_NUM;
-	CreateComputeBuffer(&tile_aabbs_buffer_data, (uint32_t)bufferSize, tile_aabbs_buffer, tile_aabbs_buffer_memory);
+	CreateLocalStorageBuffer(&tile_aabbs_buffer_data, (uint32_t)bufferSize, tile_aabbs_buffer, tile_aabbs_buffer_memory);
 	tile_aabbs_buffer_info.buffer = tile_aabbs_buffer;
 	tile_aabbs_buffer_info.offset = 0;
 	tile_aabbs_buffer_info.range = bufferSize;
 
 	/// screen to view
 	bufferSize = sizeof(ScreenToView);
-	CreateComputeBuffer(&screen_to_view_buffer_data, (uint32_t)bufferSize, screen_to_view_buffer, screen_to_view_buffer_memory);
+	CreateLocalStorageBuffer(&screen_to_view_buffer_data, (uint32_t)bufferSize, screen_to_view_buffer, screen_to_view_buffer_memory);
 	ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
 	stv->screenDimensions = glm::uvec2(Application::Inst()->GetWidth(), Application::Inst()->GetHeight());
 	stv->tileSizes = glm::uvec4(group_num, tile_size_x);
@@ -1089,28 +1093,28 @@ void VulkanRenderer::CreateCompDescriptorSets()
 
 	/// light datas
 	bufferSize = sizeof(PointLightData) * MAX_LIGHT_NUM;
-	CreateComputeBuffer(&light_datas_buffer_data, (uint32_t)bufferSize, light_datas_buffer, light_datas_buffer_memory);
+	CreateLocalStorageBuffer(&light_datas_buffer_data, (uint32_t)bufferSize, light_datas_buffer, light_datas_buffer_memory);
 	light_datas_buffer_info.buffer = light_datas_buffer;
 	light_datas_buffer_info.offset = 0;
 	light_datas_buffer_info.range = bufferSize;
 
 	/// light indexes
 	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * CLUSTE_NUM;
-	CreateComputeBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, light_indexes_buffer, light_indexes_buffer_memory);
+	CreateGraphicsStorageBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, light_indexes_buffer, light_indexes_buffer_memory);
 	light_indexes_buffer_info.buffer = light_indexes_buffer;
 	light_indexes_buffer_info.offset = 0;
 	light_indexes_buffer_info.range = bufferSize;
 
 	/// light grids
 	bufferSize = sizeof(LightGrid) * CLUSTE_NUM;
-	CreateComputeBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
+	CreateGraphicsStorageBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
 	light_grids_buffer_info.buffer = light_grids_buffer;
 	light_grids_buffer_info.offset = 0;
 	light_grids_buffer_info.range = bufferSize;
 
 	/// global index count
 	bufferSize = sizeof(glm::uint);
-	CreateComputeBuffer(&index_count_buffer_data, (uint32_t)bufferSize, index_count_buffer, index_count_buffer_memory);
+	CreateLocalStorageBuffer(&index_count_buffer_data, (uint32_t)bufferSize, index_count_buffer, index_count_buffer_memory);
 	index_count_buffer_info.buffer = index_count_buffer;
 	index_count_buffer_info.offset = 0;
 	index_count_buffer_info.range = bufferSize;
@@ -1246,6 +1250,42 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	vkCmdBindDescriptorSets(comp_command_buffers[command_buffer_idx], VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipeline_layout, 0, 1, &comp_desc_set[active_command_buffer_idx], 0, nullptr);
 
 	vkCmdDispatch(comp_command_buffers[command_buffer_idx], 1, 1, 6);
+
+	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
+	VkBufferMemoryBarrier buffer_barriers[2] =
+	{
+		{
+			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+			nullptr,
+			VK_ACCESS_SHADER_WRITE_BIT,
+			0,
+			indices.computeFamily.value(),
+			indices.graphicsFamily.value(),
+			light_indexes_buffer_info.buffer,
+			0,
+			light_indexes_buffer_info.range,
+		},
+		{
+			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+			nullptr,
+			VK_ACCESS_SHADER_WRITE_BIT,
+			0,
+			indices.computeFamily.value(),
+			indices.graphicsFamily.value(),
+			light_grids_buffer_info.buffer,
+			0,
+			light_grids_buffer_info.range,
+		},
+	};
+
+	vkCmdPipelineBarrier(
+		comp_command_buffers[command_buffer_idx],
+		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		0,
+		0, nullptr,
+		2, buffer_barriers,
+		0, nullptr);
 
 	vkEndCommandBuffer(comp_command_buffers[command_buffer_idx]);	
 	
@@ -1464,10 +1504,18 @@ void VulkanRenderer::CreateImageBuffer(void* imageData, uint32_t length, VkBuffe
 	vkUnmapMemory(device, mem);
 }
 
-void VulkanRenderer::CreateComputeBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
+void VulkanRenderer::CreateLocalStorageBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
 {
 	VkDeviceSize bufferSize = length;
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, mem);
+
+	vkMapMemory(device, mem, 0, bufferSize, 0, data);
+}
+
+void VulkanRenderer::CreateGraphicsStorageBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
+{
+	VkDeviceSize bufferSize = length;
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer, mem);
 
 	vkMapMemory(device, mem, 0, bufferSize, 0, data);
 }
@@ -1558,41 +1606,41 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[2].dstArrayElement = 0;
 		descriptorWrites[2].dstBinding = 2;
 
+		descriptorWrites[3] = {};
 		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[3].pNext = NULL;
 		descriptorWrites[3].dstSet = descSets[active_command_buffer_idx];
-		descriptorWrites[3].dstBinding = 3;
-		descriptorWrites[3].dstArrayElement = 0;
-		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorWrites[3].descriptorCount = 1;
-		descriptorWrites[3].pImageInfo = image_info;
+		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		descriptorWrites[3].pBufferInfo = &light_indexes_buffer_info;
+		descriptorWrites[3].dstArrayElement = 0;
+		descriptorWrites[3].dstBinding = 3;
 
+		descriptorWrites[4] = {};
 		descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[4].pNext = NULL;
 		descriptorWrites[4].dstSet = descSets[active_command_buffer_idx];
-		descriptorWrites[4].dstBinding = 4;
-		descriptorWrites[4].dstArrayElement = 0;
-		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorWrites[4].descriptorCount = 1;
-		descriptorWrites[4].pImageInfo = normal_image_info;
+		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		descriptorWrites[4].pBufferInfo = &light_grids_buffer_info;
+		descriptorWrites[4].dstArrayElement = 0;
+		descriptorWrites[4].dstBinding = 4;
 
-		descriptorWrites[5] = {};
 		descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[5].pNext = NULL;
 		descriptorWrites[5].dstSet = descSets[active_command_buffer_idx];
-		descriptorWrites[5].descriptorCount = 1;
-		descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		descriptorWrites[5].pBufferInfo = &light_indexes_buffer_info;
-		descriptorWrites[5].dstArrayElement = 0;
 		descriptorWrites[5].dstBinding = 5;
+		descriptorWrites[5].dstArrayElement = 0;
+		descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[5].descriptorCount = 1;
+		descriptorWrites[5].pImageInfo = image_info;
 
-		descriptorWrites[6] = {};
 		descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[6].pNext = NULL;
 		descriptorWrites[6].dstSet = descSets[active_command_buffer_idx];
-		descriptorWrites[6].descriptorCount = 1;
-		descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		descriptorWrites[6].pBufferInfo = &light_grids_buffer_info;
-		descriptorWrites[6].dstArrayElement = 0;
 		descriptorWrites[6].dstBinding = 6;
+		descriptorWrites[6].dstArrayElement = 0;
+		descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[6].descriptorCount = 1;
+		descriptorWrites[6].pImageInfo = normal_image_info;
 
 		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, NULL);
 
@@ -1702,13 +1750,13 @@ void VulkanRenderer::CreateDescriptorSetsPool()
 	typeCounts[1].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
 	typeCounts[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	typeCounts[2].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM * MAX_LIGHT_NUM;
-	typeCounts[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	typeCounts[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	typeCounts[3].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
-	typeCounts[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	typeCounts[4].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	typeCounts[4].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
-	typeCounts[5].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[5].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	typeCounts[5].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
-	typeCounts[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	typeCounts[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	typeCounts[6].descriptorCount = swap_chain_images.size() * MAX_MATERIAL_NUM;
 
 	VkDescriptorPoolCreateInfo descriptorPool = {};
@@ -1883,6 +1931,42 @@ void VulkanRenderer::RenderBegin()
 	if (vkBeginCommandBuffer(command_buffers[active_command_buffer_idx], &beginInfo) != VK_SUCCESS) {
 		throw std::runtime_error("failed to begin recording command buffer!");
 	}
+
+	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
+	VkBufferMemoryBarrier buffer_barriers[2] =
+	{
+		{
+			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+			nullptr,
+			0,
+			VK_ACCESS_SHADER_READ_BIT,
+			indices.computeFamily.value(),
+			indices.graphicsFamily.value(),
+			light_indexes_buffer_info.buffer,
+			0,
+			light_indexes_buffer_info.range,
+		},
+		{
+			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+			nullptr,
+			0,
+			VK_ACCESS_SHADER_READ_BIT,
+			indices.computeFamily.value(),
+			indices.graphicsFamily.value(),
+			light_grids_buffer_info.buffer,
+			0,
+			light_grids_buffer_info.range,
+		},
+	};
+
+	vkCmdPipelineBarrier(
+		command_buffers[active_command_buffer_idx],
+		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		0,
+		0, nullptr,
+		2, buffer_barriers,
+		0, nullptr);
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
