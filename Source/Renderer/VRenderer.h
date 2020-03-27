@@ -128,7 +128,8 @@ public:
 	void CreateVertexBuffer( void* vdata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateIndexBuffer(void* idata, uint32_t single, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateImageBuffer(void* imageData, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
-	void CreateComputeBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
+	void CreateLocalStorageBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
+	void CreateGraphicsStorageBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void CreateUniformBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem);
 	void UnmapBufferMemory(VkDeviceMemory& mem);
 	void CleanBuffer(VkBuffer& buffer, VkDeviceMemory& mem);
