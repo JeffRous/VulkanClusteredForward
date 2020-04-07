@@ -53,6 +53,7 @@ struct TransformData {
 	glm::mat4x4 proj;
 	glm::mat4x4 proj_view;
 	glm::vec3 cam_pos;
+	float padding;
 	glm::uvec4 tileSizes;
 	float zNear;
 	float zFar;

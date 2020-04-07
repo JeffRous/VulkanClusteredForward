@@ -1125,8 +1125,8 @@ void VulkanRenderer::ReleaseCompDescriptorSets()
 	UnmapBufferMemory(tile_aabbs_buffer_memory);
 	UnmapBufferMemory(screen_to_view_buffer_memory);
 	UnmapBufferMemory(light_datas_buffer_memory);
-	UnmapBufferMemory(light_indexes_buffer_memory);
-	UnmapBufferMemory(light_grids_buffer_memory);
+//	UnmapBufferMemory(light_indexes_buffer_memory);
+//	UnmapBufferMemory(light_grids_buffer_memory);
 	UnmapBufferMemory(index_count_buffer_memory);
 	CleanBuffer(tile_aabbs_buffer, tile_aabbs_buffer_memory);
 	CleanBuffer(screen_to_view_buffer, screen_to_view_buffer_memory);
@@ -1141,7 +1141,7 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 {
 	vkWaitForFences(device, 1, &comp_wait_fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
 	vkResetFences(device, 1, &comp_wait_fence);
-
+	/*
 	VolumeTileAABB* volumnAABBs = (VolumeTileAABB*)tile_aabbs_buffer_data;
 	LightGrid* lightGrids = (LightGrid*)light_grids_buffer_data;
 	glm::uint* lightIndexs = (glm::uint*)light_indexes_buffer_data;
@@ -1149,7 +1149,7 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	{
 		LightGrid* lightGrid = lightGrids + i;
 		glm::uint* lightIndex = lightIndexs + lightGrid->offset;
-		if (i == 0)
+		if (i == CLUSTE_NUM/2+144*5)
 		{
 			printf("total light count(%d) offset(%d) for cluste(%d):", lightGrid->count, lightGrid->offset, i);
 			for (int j = 0; j < lightGrid->count; j++)
@@ -1158,9 +1158,11 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 			}
 			printf("\n");
 			VolumeTileAABB* volumnAABB = volumnAABBs + i;
-			printf("real light min(%d) offset(%d)\n", (int)volumnAABB->minPoint[3], (int)volumnAABB->maxPoint[3]);
+			printf("volumn min:%f, %f, %f\n", volumnAABB->minPoint[0], volumnAABB->minPoint[1], volumnAABB->minPoint[2]);
+			printf("volumn max:%f, %f, %f\n", volumnAABB->maxPoint[0], volumnAABB->maxPoint[1], volumnAABB->maxPoint[2]);
+			printf("light (%d) is out posz(%f)\n", (int)volumnAABB->minPoint[3], volumnAABB->maxPoint[3]);
 		}
-	}
+	}*/
 
 	/// set descriptor sets
 	std::array<VkWriteDescriptorSet, 6> descriptorWrites = {};
@@ -1515,9 +1517,10 @@ void VulkanRenderer::CreateLocalStorageBuffer(void** data, uint32_t length, VkBu
 void VulkanRenderer::CreateGraphicsStorageBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)
 {
 	VkDeviceSize bufferSize = length;
-	CreateBuffer(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer, mem);
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer, mem);
+	///CreateBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, mem);
 
-	vkMapMemory(device, mem, 0, bufferSize, 0, data);
+	///vkMapMemory(device, mem, 0, bufferSize, 0, data);
 }
 
 void VulkanRenderer::CreateUniformBuffer(void** data, uint32_t length, VkBuffer& buffer, VkDeviceMemory& mem)

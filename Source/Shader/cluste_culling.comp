@@ -107,12 +107,6 @@ void main(){
 
     lightGrid[tileIndex].offset = offset;
     lightGrid[tileIndex].count = visibleLightCount;
-
-    //cluster[tileIndex].minPoint[3] = visibleLightIndices[0];
-    //cluster[tileIndex].maxPoint[3] = visibleLightIndices[visibleLightCount-1];
-    barrier();
-    cluster[tileIndex].minPoint[3] = globalLightIndexList[offset+0];
-    cluster[tileIndex].maxPoint[3] = offset;
 }
 
 bool testSphereAABB(uint light, uint tile){
@@ -120,7 +114,13 @@ bool testSphereAABB(uint light, uint tile){
     vec3 center  = vec3(viewMatrix * vec4(sharedLights[light].pos, 1.0f));
     float squaredDistance = sqDistPointAABB(center, tile);
 
-    return squaredDistance <= (radius * radius);
+    bool ret = (squaredDistance <= (radius * radius));
+///    if(!ret)
+///    {
+///        cluster[tile].minPoint[3] = light;
+///        cluster[tile].maxPoint[3] = center.z;
+///    }
+    return ret;
 }
 
 float sqDistPointAABB(vec3 point, uint tile){

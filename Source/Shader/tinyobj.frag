@@ -14,6 +14,7 @@ layout (std140, binding = 0) uniform TransformData {
     mat4 proj;
     mat4 proj_view;
     vec3 cam_pos;
+    float padding;
     uvec4 tileSizes;
     float zNear;
     float zFar;
@@ -75,6 +76,9 @@ void main() {
     uint tileIndex = tiles.x +
                      transform.tileSizes.x * tiles.y +
                      (transform.tileSizes.x * transform.tileSizes.y) * tiles.z;
+    ///float color = float(zTile) / transform.tileSizes.z;
+    ///outColor.xyz = vec3(color, color, color);
+    ///return;
 
     uint offset = lightGrid[tileIndex].offset;
     uint visibleLightCount = lightGrid[tileIndex].count;
