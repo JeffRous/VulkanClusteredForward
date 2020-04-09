@@ -52,6 +52,19 @@ public:
 	void SetScrollOffset(float offset) { scroll_offset = offset; }
 	glm::vec2 GetMoveOffset() { return move_offset; }
 	void SetMoveOffset(glm::vec2 offset) { move_offset = offset; }
+	void SetKeyPressed(int key) 
+	{
+		if (key < 0)
+			key_pressed = false;
+		key_pressed = true;
+		pressed_key = key;
+	}
+	int GetPressedKey()
+	{
+		if (!key_pressed)
+			return -1;
+		return pressed_key;
+	}
 
 	void SceneRender();
 
@@ -79,6 +92,8 @@ private:
 	int control_state;	// 0 normal 1 rotate 2 shift
 	float scroll_offset;
 	glm::vec2 move_offset;
+	bool key_pressed;
+	int pressed_key;
 };
 
 #endif // !__APPLICATION_H__

@@ -48,7 +48,7 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	tile_size_x = (unsigned int)std::ceilf(Application::Inst()->GetWidth() / (float)CLUSTE_X);;
 	group_num = glm::uvec3(CLUSTE_X, CLUSTE_Y, CLUSTE_Z);
 
-	if( isClusteShading )
+	///if( isClusteShading )
 		InitializeClusteRendering();
 
 	CreateCommandPool();
@@ -173,7 +173,7 @@ void VulkanRenderer::CleanUp()
 	vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
 	vkDestroyRenderPass(device, render_pass, nullptr);
 
-	if (isClusteShading)
+	///if (isClusteShading)
 	{
 		ReleaseCompDescriptorSets();
 		vkDestroyDescriptorPool(device, comp_desc_pool, nullptr);
@@ -1693,6 +1693,7 @@ void VulkanRenderer::SetCamPos(glm::vec3& pos)
 	transData->zFar = zFar;
 	transData->scale = (float)CLUSTE_Z / std::log2f(zFar / zNear);
 	transData->bias = -((float)CLUSTE_Z * std::log2f(zNear) / std::log2f(zFar / zNear));
+	transData->isClusteShading = isClusteShading;
 }
 
 void VulkanRenderer::SetTexture(Texture* tex)
@@ -1935,41 +1936,44 @@ void VulkanRenderer::RenderBegin()
 		throw std::runtime_error("failed to begin recording command buffer!");
 	}
 
-	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
-	VkBufferMemoryBarrier buffer_barriers[2] =
+	if (isClusteShading)
 	{
+		QueueFamilyIndices indices = FindQueueFamilies(physical_device);
+		VkBufferMemoryBarrier buffer_barriers[2] =
 		{
-			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-			nullptr,
-			0,
-			VK_ACCESS_SHADER_READ_BIT,
-			indices.computeFamily.value(),
-			indices.graphicsFamily.value(),
-			light_indexes_buffer_info.buffer,
-			0,
-			light_indexes_buffer_info.range,
-		},
-		{
-			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-			nullptr,
-			0,
-			VK_ACCESS_SHADER_READ_BIT,
-			indices.computeFamily.value(),
-			indices.graphicsFamily.value(),
-			light_grids_buffer_info.buffer,
-			0,
-			light_grids_buffer_info.range,
-		},
-	};
+			{
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+				nullptr,
+				0,
+				VK_ACCESS_SHADER_READ_BIT,
+				indices.computeFamily.value(),
+				indices.graphicsFamily.value(),
+				light_indexes_buffer_info.buffer,
+				0,
+				light_indexes_buffer_info.range,
+			},
+			{
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+				nullptr,
+				0,
+				VK_ACCESS_SHADER_READ_BIT,
+				indices.computeFamily.value(),
+				indices.graphicsFamily.value(),
+				light_grids_buffer_info.buffer,
+				0,
+				light_grids_buffer_info.range,
+			},
+		};
 
-	vkCmdPipelineBarrier(
-		command_buffers[active_command_buffer_idx],
-		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-		0,
-		0, nullptr,
-		2, buffer_barriers,
-		0, nullptr);
+		vkCmdPipelineBarrier(
+			command_buffers[active_command_buffer_idx],
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0,
+			0, nullptr,
+			2, buffer_barriers,
+			0, nullptr);
+	}
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -2032,7 +2036,10 @@ void VulkanRenderer::Flush()
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	VkSemaphore waitSemaphores[2] = { image_available_semaphore, compute_finished_semaphore };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };	/// in the stage wait the sema
-	submitInfo.waitSemaphoreCount = 2;
+	if(isClusteShading)
+		submitInfo.waitSemaphoreCount = 2;
+	else
+		submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;

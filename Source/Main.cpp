@@ -14,7 +14,8 @@
 #include "Renderer/VRenderer.h"
 #include "Scene/SampleScene.h"
 
-int main() {
+int main() 
+{
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);

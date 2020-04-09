@@ -21,6 +21,7 @@ Application::Application()
 	delta_time = 0.0f;
 	control_state = 0;
 	scroll_offset = 0.0f;
+	key_pressed = false;
 	last_time = Utils::GetMS();
 }
 
@@ -92,6 +93,14 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	Application::Inst()->SetScrollOffset(scrollOffset);
 }
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (action == GLFW_RELEASE)
+	{
+		Application::Inst()->SetKeyPressed(key);
+	}
+}
+
 void Application::CreateRenderer(GLFWwindow* window)
 {
 	current_window = window;
@@ -107,6 +116,7 @@ void Application::CreateRenderer(GLFWwindow* window)
 	glfwSetCursorPosCallback(window, cursor_position_callback);
 	glfwSetMouseButtonCallback(current_window, mouse_button_callback);
 	glfwSetScrollCallback(current_window, scroll_callback);
+	glfwSetKeyCallback(current_window, key_callback);
 }
 
 float Application::GetWidth()
@@ -135,7 +145,7 @@ void Application::showFPS(GLFWwindow *pWindow)
 
 		char title[256];
 		title[255] = '\0';
-		snprintf(title, 255, "[FPS: %3.2f]", fps);
+		snprintf(title, 255, "[FPS: %3.2f] [ClusteShading: %s]", fps, ((VulkanRenderer*)renderer)->IsClusteShading() ? "ON" : "OFF");
 		glfwSetWindowTitle(pWindow, title);
 		nb_frames = 0;
 		last_fps_time = currentTime;
@@ -158,6 +168,7 @@ bool Application::MainLoop()
 	/// flush
 	renderer->Flush();
 
+	key_pressed = false;
 	return true;
 }
 

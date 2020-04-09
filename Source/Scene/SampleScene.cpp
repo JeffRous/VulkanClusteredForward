@@ -59,6 +59,11 @@ bool SampleScene::OnUpdate(float dt)
 		colorR = 0.0f;
 
 	UpdateCameraByInput();
+	if (Application::Inst()->GetPressedKey() == GLFW_KEY_C)
+	{
+		VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
+		vRenderer->SetClusteShading(!vRenderer->IsClusteShading());
+	}
 
 	return true;
 }

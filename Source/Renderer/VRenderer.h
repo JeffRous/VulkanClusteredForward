@@ -53,7 +53,7 @@ struct TransformData {
 	glm::mat4x4 proj;
 	glm::mat4x4 proj_view;
 	glm::vec3 cam_pos;
-	float padding;
+	bool isClusteShading;
 	glm::uvec4 tileSizes;
 	float zNear;
 	float zFar;
@@ -162,6 +162,9 @@ public:
 	void ClearLight();
 
 	void UpdateComputeDescriptorSet();
+
+	bool IsClusteShading() { return isClusteShading; }
+	void SetClusteShading(bool _isClusteShading) { isClusteShading = _isClusteShading; }
 
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();

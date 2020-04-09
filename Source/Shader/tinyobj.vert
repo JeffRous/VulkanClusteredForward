@@ -8,7 +8,7 @@ layout (std140, binding = 0) uniform TransformData {
     mat4 proj;
     mat4 proj_view;
     vec3 cam_pos;
-    float padding;
+    bool isClusteShading;
     uvec4 tileSizes;
     float zNear;
     float zFar;
