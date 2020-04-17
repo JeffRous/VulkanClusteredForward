@@ -49,10 +49,12 @@ struct LightGrid{
 vec4 clipToView(vec4 clip);
 vec4 screen2View(vec4 screen);
 vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance);
+static inline float dot(vec3 a, vec3 b);
+static inline vec3 vcross(vec3 v0, vec3 v1);
 
 vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance){
     //Because this is a Z based normal this is fixed
-    vec3 normal = vec3(0.0, 0.0, 1.0);
+    vec3 normal = {0.0, 0.0, 1.0};
 
     vec3 ab =  B - A;
 
@@ -65,9 +67,9 @@ vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance){
     return result;
 }
 
-vec4 clipToView(vec4 clip){
+vec4 clipToView(vec4 clip, ScreenToView& screenToView){
     //View space transform
-    vec4 view = inverseProjection * clip;
+    vec4 view = screenToView.inverseProjection * clip;
 
     //Perspective projection
     view = view / view.w;
@@ -75,19 +77,38 @@ vec4 clipToView(vec4 clip){
     return view;
 }
 
-vec4 screen2View(vec4 screen){
+vec4 screen2View(vec4 screen, ScreenToView& screenToView){
     //Convert to NDC
-    vec2 texCoord = screen.xy / screenDimensions.xy;
+    vec2 texCoord = screen.xy / screenToView.screenDimensions.xy;
 
     //Convert to clipSpace
     // vec4 clip = vec4(vec2(texCoord.x, 1.0 - texCoord.y)* 2.0 - 1.0, screen.z, screen.w);
     vec4 clip = vec4(vec2(texCoord.x, texCoord.y)* 2.0 - 1.0, screen.z, screen.w);
     //Not sure which of the two it is just yet
 
-    return clipToView(clip);
+    return clipToView(clip, screenToView);
 }
 
-export void cluste_culling_ispc (uniform int x, uniform int y, uniform int z, uniform PointLight pointLights[], uniform LightGrid lightGrids[], uniform uint globalLightIndexList[])
+inline float dot(vec3 a, vec3 b) 
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+inline vec3 vcross(vec3 v0, vec3 v1) 
+{
+    vec3 ret;
+    ret.x = v0.y * v1.z - v0.z * v1.y;
+    ret.y = v0.z * v1.x - v0.x * v1.z;
+    ret.z = v0.x * v1.y - v0.y * v1.x;
+    return ret;
+}
+
+vec3 apply( float[] m, vec3 v )
+{
+    
+}
+
+export void cluste_culling_ispc (uniform int x, uniform int y, uniform int z, uniform ScreenToView& screenToView, uniform PointLight pointLights[], uniform LightGrid lightGrids[], uniform uint globalLightIndexList[])
 {
     
 }
