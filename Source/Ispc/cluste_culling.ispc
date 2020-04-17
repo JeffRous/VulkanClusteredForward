@@ -46,11 +46,14 @@ struct LightGrid{
 };
 
 //Function prototypes
-vec4 clipToView(vec4 clip);
-vec4 screen2View(vec4 screen);
-vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance);
+static vec4 clipToView(vec4 clip);
+static vec4 screen2View(vec4 screen);
+static vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance);
 static inline float dot(vec3 a, vec3 b);
 static inline vec3 vcross(vec3 v0, vec3 v1);
+static inline vec2 toVec2(float x, float y);
+static inline vec4 toVec4(vec2 v, float z, float w);
+static vec4 apply(mat4 m, vec4 v);
 
 vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance){
     //Because this is a Z based normal this is fixed
@@ -69,7 +72,7 @@ vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance){
 
 vec4 clipToView(vec4 clip, ScreenToView& screenToView){
     //View space transform
-    vec4 view = screenToView.inverseProjection * clip;
+    vec4 view = apply(screenToView.inverseProjection, clip);
 
     //Perspective projection
     view = view / view.w;
@@ -83,10 +86,28 @@ vec4 screen2View(vec4 screen, ScreenToView& screenToView){
 
     //Convert to clipSpace
     // vec4 clip = vec4(vec2(texCoord.x, 1.0 - texCoord.y)* 2.0 - 1.0, screen.z, screen.w);
-    vec4 clip = vec4(vec2(texCoord.x, texCoord.y)* 2.0 - 1.0, screen.z, screen.w);
+    vec4 clip = toVec4(toVec2(texCoord.x, texCoord.y)* 2.0 - 1.0, screen.z, screen.w);
     //Not sure which of the two it is just yet
 
     return clipToView(clip, screenToView);
+}
+
+inline vec2 toVec2(float x, float y)
+{
+    vec2 ret;
+    ret.x = x;
+    ret.y = y;
+    return ret;
+}
+
+inline vec4 toVec4(vec2 v, float z, float w)
+{
+    vec4 ret;
+    ret.x = v.x;
+    ret.y = v.y;
+    ret.z = z;
+    ret.w = w;
+    return ret;
 }
 
 inline float dot(vec3 a, vec3 b) 
@@ -103,9 +124,18 @@ inline vec3 vcross(vec3 v0, vec3 v1)
     return ret;
 }
 
-vec3 apply( float[] m, vec3 v )
+vec4 apply(mat4 m, vec4 v)
 {
-    
+    vec4 ret;
+    for (size_t row = 0; row < 4; row++) 
+    {
+        float sum = 0;
+        for (int col = 0; col < 4; col++) {
+            sum += v[col] * m[row*4 +col];
+        }
+        ret[row] = sum;
+    }
+    return ret;
 }
 
 export void cluste_culling_ispc (uniform int x, uniform int y, uniform int z, uniform ScreenToView& screenToView, uniform PointLight pointLights[], uniform LightGrid lightGrids[], uniform uint globalLightIndexList[])
