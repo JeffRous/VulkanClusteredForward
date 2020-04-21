@@ -22,7 +22,7 @@ struct ScreenToView{
     float zFar;
 };
 
-struct PointLight{
+struct PointLightData{
     vec3 pos;
 	float radius;
 	vec3 color;
@@ -233,7 +233,7 @@ float sqDistPointAABB(vec3 point, vec3 minPoint, vec3 maxPoint)
 }
 
 /// 16, 9, 24
-export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform int zSize, uniform ScreenToView& screenToView, uniform PointLight pointLights[], uniform int lightCount, uniform LightGrid lightGrids[], uniform uint globalLightIndexList[])
+export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform int zSize, uniform ScreenToView& screenToView, uniform PointLightData pointLights[], uniform int lightCount, uniform LightGrid lightGrids[], uniform uint globalLightIndexList[])
 {
     uniform int32 globalIndexCount = 0;
 

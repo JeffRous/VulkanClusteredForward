@@ -12,6 +12,12 @@
 #include "Light.h"
 #include "VRenderer.h"
 
+/// prevent multi-define
+#define __ISPC_STRUCT_ScreenToView__
+#define __ISPC_STRUCT_PointLightData__
+#define __ISPC_STRUCT_LightGrid__
+#include "Ispc/cluste_culling_ispc.h"
+
 #undef max
 #undef min
 
@@ -1047,6 +1053,14 @@ void VulkanRenderer::CreateCompPipeline()
 	}
 }
 
+void VulkanRenderer::ClusteCulling()
+{
+	ScreenToView screenToView;
+	LightGrid * lightGrids = new LightGrid[CLUSTE_NUM];
+	uint32_t * globalLightIndexList = new uint32_t[CLUSTE_NUM*MAX_LIGHT_NUM];
+	ispc::cluste_culling_ispc(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToView, light_infos.data(), light_infos.size(), lightGrids, globalLightIndexList);
+}
+
 void VulkanRenderer::InitializeClusteRendering()
 {
 	CreateCompPipeline();
@@ -1892,8 +1906,16 @@ void VulkanRenderer::AddLight(PointLight* light)
 	memcpy(light_uniform_buffer_datas[idx], &lightData, sizeof(PointLightData));
 
 	if (isClusteShading)
-	{	// for clust shading compute data
-		memcpy((unsigned char*)light_datas_buffer_data + idx * sizeof(PointLightData), &lightData, sizeof(PointLightData));
+	{	
+		if (isIspc)
+		{
+
+		}
+		else
+		{
+			// for clust shading compute data
+			memcpy((unsigned char*)light_datas_buffer_data + idx * sizeof(PointLightData), &lightData, sizeof(PointLightData));
+		}
 	}
 }
 
@@ -1905,12 +1927,17 @@ void VulkanRenderer::ClearLight()
 void VulkanRenderer::RenderBegin()
 {
 	/// set camera
-	if (camera != NULL)
-	{
-		camera->UpdateViewProject();
+	assert(camera != NULL);
+	camera->UpdateViewProject();
 
-		/// cluster compute parameter setting
-		if (isClusteShading)
+	/// branch ispc/gpu cluste_shading
+	if (isClusteShading)
+	{
+		if (isIspc)
+		{
+			ClusteCulling();
+		}
+		else
 		{
 			glm::mat4x4 clipMtx = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
 				0.0f, -1.0f, 0.0f, 0.0f,
@@ -1921,12 +1948,9 @@ void VulkanRenderer::RenderBegin()
 			stv->viewMatrix = *camera->GetViewMatrix();
 			stv->zNear = camera->GetNearDistance();
 			stv->zFar = camera->GetFarDistance();
-		}
-	}
 
-	if (isClusteShading)
-	{
-		UpdateComputeDescriptorSet();
+			UpdateComputeDescriptorSet();
+		}
 	}
 
 	VkCommandBufferBeginInfo beginInfo = {};
@@ -1936,7 +1960,7 @@ void VulkanRenderer::RenderBegin()
 		throw std::runtime_error("failed to begin recording command buffer!");
 	}
 
-	if (isClusteShading)
+	if (isClusteShading && !isIspc)
 	{
 		QueueFamilyIndices indices = FindQueueFamilies(physical_device);
 		VkBufferMemoryBarrier buffer_barriers[2] =
@@ -2036,7 +2060,7 @@ void VulkanRenderer::Flush()
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	VkSemaphore waitSemaphores[2] = { image_available_semaphore, compute_finished_semaphore };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };	/// in the stage wait the sema
-	if(isClusteShading)
+	if(isClusteShading && !isIspc)
 		submitInfo.waitSemaphoreCount = 2;
 	else
 		submitInfo.waitSemaphoreCount = 1;

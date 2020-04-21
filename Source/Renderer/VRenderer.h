@@ -228,6 +228,8 @@ private:
 
 	void CreateSemaphores();
 
+	void ClusteCulling();
+
 	void CleanUp();
 
 private:
