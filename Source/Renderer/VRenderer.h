@@ -228,7 +228,7 @@ private:
 
 	void CreateSemaphores();
 
-	void ClusteCulling();
+	void SetScreenToViewData(ScreenToView* stv);
 
 	void CleanUp();
 

@@ -1053,14 +1053,6 @@ void VulkanRenderer::CreateCompPipeline()
 	}
 }
 
-void VulkanRenderer::ClusteCulling()
-{
-	ScreenToView screenToView;
-	LightGrid * lightGrids = new LightGrid[CLUSTE_NUM];
-	uint32_t * globalLightIndexList = new uint32_t[CLUSTE_NUM*MAX_LIGHT_NUM];
-	ispc::cluste_culling_ispc(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToView, light_infos.data(), light_infos.size(), lightGrids, globalLightIndexList);
-}
-
 void VulkanRenderer::InitializeClusteRendering()
 {
 	CreateCompPipeline();
@@ -1114,14 +1106,20 @@ void VulkanRenderer::CreateCompDescriptorSets()
 
 	/// light indexes
 	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * CLUSTE_NUM;
-	CreateGraphicsStorageBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, light_indexes_buffer, light_indexes_buffer_memory);
+	if( !isIspc )
+		CreateGraphicsStorageBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, light_indexes_buffer, light_indexes_buffer_memory);
+	else
+		CreateLocalStorageBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, light_indexes_buffer, light_indexes_buffer_memory);
 	light_indexes_buffer_info.buffer = light_indexes_buffer;
 	light_indexes_buffer_info.offset = 0;
 	light_indexes_buffer_info.range = bufferSize;
 
 	/// light grids
 	bufferSize = sizeof(LightGrid) * CLUSTE_NUM;
-	CreateGraphicsStorageBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
+	if( !isIspc )
+		CreateGraphicsStorageBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
+	else
+		CreateLocalStorageBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
 	light_grids_buffer_info.buffer = light_grids_buffer;
 	light_grids_buffer_info.offset = 0;
 	light_grids_buffer_info.range = bufferSize;
@@ -1139,8 +1137,11 @@ void VulkanRenderer::ReleaseCompDescriptorSets()
 	UnmapBufferMemory(tile_aabbs_buffer_memory);
 	UnmapBufferMemory(screen_to_view_buffer_memory);
 	UnmapBufferMemory(light_datas_buffer_memory);
-//	UnmapBufferMemory(light_indexes_buffer_memory);
-//	UnmapBufferMemory(light_grids_buffer_memory);
+	if (isIspc)
+	{
+		UnmapBufferMemory(light_indexes_buffer_memory);
+		UnmapBufferMemory(light_grids_buffer_memory);
+	}
 	UnmapBufferMemory(index_count_buffer_memory);
 	CleanBuffer(tile_aabbs_buffer, tile_aabbs_buffer_memory);
 	CleanBuffer(screen_to_view_buffer, screen_to_view_buffer_memory);
@@ -1907,11 +1908,7 @@ void VulkanRenderer::AddLight(PointLight* light)
 
 	if (isClusteShading)
 	{	
-		if (isIspc)
-		{
-
-		}
-		else
+		if (!isIspc)
 		{
 			// for clust shading compute data
 			memcpy((unsigned char*)light_datas_buffer_data + idx * sizeof(PointLightData), &lightData, sizeof(PointLightData));
@@ -1922,6 +1919,18 @@ void VulkanRenderer::AddLight(PointLight* light)
 void VulkanRenderer::ClearLight()
 {
 	light_infos.clear();
+}
+
+void VulkanRenderer::SetScreenToViewData(ScreenToView* stv)
+{
+	glm::mat4x4 clipMtx = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, -1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f);
+	stv->inverseProjection = glm::inverse(clipMtx * (*camera->GetProjectMatrix()));
+	stv->viewMatrix = *camera->GetViewMatrix();
+	stv->zNear = camera->GetNearDistance();
+	stv->zFar = camera->GetFarDistance();
 }
 
 void VulkanRenderer::RenderBegin()
@@ -1935,20 +1944,16 @@ void VulkanRenderer::RenderBegin()
 	{
 		if (isIspc)
 		{
-			ClusteCulling();
+			/// update input data
+			ScreenToView screenToView;
+			SetScreenToViewData(&screenToView);
+
+			/// calculation with ispc
+			ispc::cluste_culling_ispc(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToView, light_infos.data(), light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
 		}
 		else
 		{
-			glm::mat4x4 clipMtx = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
-				0.0f, -1.0f, 0.0f, 0.0f,
-				0.0f, 0.0f, 1.0f, 0.0f,
-				0.0f, 0.0f, 0.0f, 1.0f);
-			ScreenToView* stv = (ScreenToView*)screen_to_view_buffer_data;
-			stv->inverseProjection = glm::inverse(clipMtx * (*camera->GetProjectMatrix()));
-			stv->viewMatrix = *camera->GetViewMatrix();
-			stv->zNear = camera->GetNearDistance();
-			stv->zFar = camera->GetFarDistance();
-
+			SetScreenToViewData((ScreenToView*)screen_to_view_buffer_data);
 			UpdateComputeDescriptorSet();
 		}
 	}
