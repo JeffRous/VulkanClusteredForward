@@ -12,6 +12,8 @@
 #include "Light.h"
 #include "VRenderer.h"
 
+#include "ClusteCulling.h"
+
 /// prevent multi-define
 #define __ISPC_STRUCT_ScreenToView__
 #define __ISPC_STRUCT_PointLightData__
@@ -20,6 +22,8 @@
 
 #undef max
 #undef min
+
+#define RAW_CPU_NOISPC
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -39,7 +43,7 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	:Renderer(win)
 {
 	isClusteShading = true;
-	isIspc = false;
+	isIspc = true;
 	last_command_buffer_idx = UINT_MAX;
 	CreateInstance();
 	CreateSurface();
@@ -1948,8 +1952,13 @@ void VulkanRenderer::RenderBegin()
 			ScreenToView screenToView;
 			SetScreenToViewData(&screenToView);
 
+#ifdef RAW_CPU_NOISPC
+			/// calculation with raw cpu for debug and compare
+			RawCpu::cluste_culling(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToView, light_infos.data(), light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
+#else
 			/// calculation with ispc
 			ispc::cluste_culling_ispc(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToView, light_infos.data(), light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
+#endif
 		}
 		else
 		{

@@ -129,6 +129,9 @@
     <ClInclude Include="Source\Ispc\cluste_culling_ispc_avx2.h">
       <Filter>Source\Ispc</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\ClusteCulling.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Object Include="Source\Ispc\cluste_culling_ispc_avx512knl.obj">

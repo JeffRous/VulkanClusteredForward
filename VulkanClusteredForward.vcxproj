@@ -218,6 +218,7 @@
     <ClInclude Include="Source\Ispc\cluste_culling_ispc_sse2.h" />
     <ClInclude Include="Source\Ispc\cluste_culling_ispc_sse4.h" />
     <ClInclude Include="Source\Renderer\Camera.h" />
+    <ClInclude Include="Source\Renderer\ClusteCulling.h" />
     <ClInclude Include="Source\Renderer\Light.h" />
     <ClInclude Include="Source\Renderer\Material.h" />
     <ClInclude Include="Source\Renderer\Model.h" />
