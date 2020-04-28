@@ -182,7 +182,7 @@ vec4 apply(mat4 m, vec4 v)
     {
         float sum = 0;
         for (int col = 0; col < 4; col++) {
-            sum += v[col] * m[row*4 +col];
+            sum += v[col] * m[row + col*4];
         }
         ret[row] = sum;
     }
