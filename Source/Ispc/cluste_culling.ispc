@@ -219,7 +219,7 @@ bool testSphereAABB(uniform ScreenToView& screenToView, vec3 pos, float radius, 
 float sqDistPointAABB(vec3 point, vec3 minPoint, vec3 maxPoint)
 {
     float sqDist = 0.0;
-    for(int i = 0; i < 3; ++i){
+    for(uniform int i = 0; i < 3; ++i){
         float v = point[i];
         if(v < maxPoint[i]){
             sqDist += (maxPoint[i] - v) * (maxPoint[i] - v);
@@ -244,13 +244,13 @@ export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform i
 
     //Per Tile variables
     float tileSizePx = screenToView.tileSizes[3];
-    for(int x = 0; x < xSize; x++)
+    for(uniform int x = 0; x < xSize; x++)
     {
-        for(int y = 0; y < ySize; y++)
+        for(uniform int y = 0; y < ySize; y++)
         {
-            for(int z = 0; z < zSize; z++)
+            for(uniform int z = 0; z < zSize; z++)
             {
-                uint tileIndex = x + y * xSize + z * xSize * ySize;
+                uniform uint tileIndex = x + y * xSize + z * xSize * ySize;
 
                 //Calculating the min and max point in screen space
                 vec4 maxPoint_sS = toVec4(toVec2(x + 1, y + 1) * tileSizePx, -1.0, 1.0); // Top Right
@@ -273,10 +273,10 @@ export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform i
                 vec3 minPointAABB = min(min(minPointNear, minPointFar),min(maxPointNear, maxPointFar));
                 vec3 maxPointAABB = max(max(minPointNear, minPointFar),max(maxPointNear, maxPointFar));
 
-                uint visibleLightIndices[100];
-                uint visibleLightCount = 0;
+                uniform uint visibleLightIndices[100];
+                uniform uint visibleLightCount = 0;
 
-                for(int light = 0; light < lightCount; light++)
+                for(uniform int light = 0; light < lightCount; light++)
                 {
                     if(pointLights[light].enabled  == 1)
                     {
@@ -288,9 +288,9 @@ export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform i
                     }
                 }
 
-                uint offset = atomic_add_global(&globalIndexCount, visibleLightCount);
+                uniform uint offset = atomic_add_global(&globalIndexCount, visibleLightCount);
 
-                for(uint i = 0; i < visibleLightCount; ++i)
+                for(uniform uint i = 0; i < visibleLightCount; ++i)
                 {
                     globalLightIndexList[offset + i] = visibleLightIndices[i];
                 }
