@@ -66,7 +66,7 @@ namespace RawCpu
 		return ret;
 	}
 
-	static void cluste_culling(int xSize, int ySize, int zSize, ScreenToView& screenToView, PointLightData pointLights[], int lightCount, LightGrid lightGrids[], glm::uint globalLightIndexList[])
+	static void cluste_culling(int xSize, int ySize, int zSize, ScreenToView& screenToView, PointLightData* pointLights, int lightCount, LightGrid* lightGrids, glm::uint* globalLightIndexList)
 	{
 		int globalIndexCount = 0;
 

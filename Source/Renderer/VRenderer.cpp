@@ -23,7 +23,7 @@
 #undef max
 #undef min
 
-#define RAW_CPU_NOISPC
+///#define RAW_CPU_NOISPC
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -1951,6 +1951,8 @@ void VulkanRenderer::RenderBegin()
 			/// update input data
 			ScreenToView screenToView;
 			SetScreenToViewData(&screenToView);
+			screenToView.screenDimensions = glm::uvec2(Application::Inst()->GetWidth(), Application::Inst()->GetHeight());
+			screenToView.tileSizes = glm::uvec4(group_num, tile_size_x);
 
 #ifdef RAW_CPU_NOISPC
 			/// calculation with raw cpu for debug and compare
