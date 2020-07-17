@@ -54,7 +54,7 @@ static inline vec3 toVec3(vec4 v);
 static inline vec4 toVec4(vec2 v, float z, float w);
 static inline vec4 toVec4(vec3 v, float w);
 static VolumeTileAABB toVolumeTileAABB(vec4 minP, vec4 maxP);
-static vec4 apply(mat4 m, vec4 v);
+static vec4 apply(uniform mat4 m, vec4 v);
 static vec3 min(vec3 v1, vec3 v2);
 static vec3 max(vec3 v1, vec3 v2);
 static bool testSphereAABB(uniform ScreenToView& screenToView, vec3 pos, float radius, vec3 minPoint, vec3 maxPoint);
@@ -175,7 +175,7 @@ inline vec3 vcross(vec3 v0, vec3 v1)
     return ret;
 }
 
-vec4 apply(mat4 m, vec4 v)
+vec4 apply(uniform mat4 m, vec4 v)
 {
     vec4 ret;
     for (size_t row = 0; row < 4; row++) 
