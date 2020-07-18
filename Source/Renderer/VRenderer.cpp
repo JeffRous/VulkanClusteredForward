@@ -15,8 +15,6 @@
 #include "ClusteCulling.h"
 
 /// prevent multi-define
-#define __ISPC_STRUCT_ScreenToView__
-#define __ISPC_STRUCT_PointLightData__
 #define __ISPC_STRUCT_LightGrid__
 #include "Ispc/cluste_culling_ispc.h"
 
@@ -24,6 +22,10 @@
 #undef min
 
 ///#define RAW_CPU_NOISPC
+
+#ifndef RAW_CPU_NOISPC
+static ispc::PointLightDataISPC* pointLightISPCDatas = NULL;
+#endif
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -53,6 +55,13 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
+
+#ifndef RAW_CPU_NOISPC
+	if (isIspc)
+	{
+		pointLightISPCDatas = new ispc::PointLightDataISPC[MAX_LIGHT_NUM];
+	}
+#endif
 
 	/// set computer number and tile size in screen space
 	tile_size_x = (unsigned int)std::ceilf(Application::Inst()->GetWidth() / (float)CLUSTE_X);;
@@ -152,6 +161,14 @@ void VulkanRenderer::CleanImage(VkImage& image, VkDeviceMemory& imageMem, VkImag
 
 void VulkanRenderer::CleanUp()
 {
+#ifndef RAW_CPU_NOISPC
+	if (pointLightISPCDatas != NULL)
+	{
+		delete[] pointLightISPCDatas;
+		pointLightISPCDatas = NULL;
+	}
+#endif
+
 	for (int i = 0; i < light_uniform_buffers.size(); i++)
 	{
 		UnmapBufferMemory(light_uniform_buffer_memorys[i]);
@@ -1917,6 +1934,22 @@ void VulkanRenderer::AddLight(PointLight* light)
 			// for clust shading compute data
 			memcpy((unsigned char*)light_datas_buffer_data + idx * sizeof(PointLightData), &lightData, sizeof(PointLightData));
 		}
+		else
+		{
+#ifndef RAW_CPU_NOISPC
+			/// set ISPC light
+			memcpy(&pointLightISPCDatas[idx].color, &lightData.color, sizeof(glm::vec3));
+			memcpy(&pointLightISPCDatas[idx].pos, &lightData.pos, sizeof(glm::vec3));
+			pointLightISPCDatas[idx].radius = lightData.radius;
+			pointLightISPCDatas[idx].enabled = lightData.enabled;
+			pointLightISPCDatas[idx].ambient_intensity = lightData.ambient_intensity;
+			pointLightISPCDatas[idx].diffuse_intensity = lightData.diffuse_intensity;
+			pointLightISPCDatas[idx].specular_intensity = lightData.specular_intensity;
+			pointLightISPCDatas[idx].attenuation_constant = lightData.attenuation_constant;
+			pointLightISPCDatas[idx].attenuation_linear = lightData.attenuation_linear;
+			pointLightISPCDatas[idx].attenuation_exp = lightData.attenuation_exp;
+#endif
+		}
 	}
 }
 
@@ -1954,12 +1987,20 @@ void VulkanRenderer::RenderBegin()
 			screenToView.screenDimensions = glm::uvec2(Application::Inst()->GetWidth(), Application::Inst()->GetHeight());
 			screenToView.tileSizes = glm::uvec4(group_num, tile_size_x);
 
+			PointLightData* lightDatas = light_infos.data();
 #ifdef RAW_CPU_NOISPC
 			/// calculation with raw cpu for debug and compare
 			RawCpu::cluste_culling(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToView, light_infos.data(), light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
 #else
 			/// calculation with ispc
-			ispc::cluste_culling_ispc(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToView, light_infos.data(), light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
+			ispc::ScreenToViewISPC screenToViewIspc;
+			memcpy(&screenToViewIspc.inverseProjection, &screenToView.inverseProjection, sizeof(glm::mat4));
+			memcpy(&screenToViewIspc.viewMatrix, &screenToView.viewMatrix, sizeof(glm::mat4));
+			memcpy(&screenToViewIspc.tileSizes, &screenToView.tileSizes, sizeof(glm::uvec4));
+			memcpy(&screenToViewIspc.screenDimensions, &screenToView.screenDimensions, sizeof(glm::uvec2));
+			screenToViewIspc.zFar = screenToView.zFar;
+			screenToViewIspc.zNear = screenToView.zNear;
+			ispc::cluste_culling_ispc(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToViewIspc, pointLightISPCDatas, light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
 #endif
 		}
 		else

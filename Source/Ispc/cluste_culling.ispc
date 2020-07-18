@@ -5,7 +5,6 @@ typedef float<2> vec2;
 typedef float<3> vec3;
 typedef float<4> vec4;
 typedef float<16> mat4;
-typedef unsigned int uint;
 
 //ssbo initialization
 struct VolumeTileAABB{
@@ -13,7 +12,7 @@ struct VolumeTileAABB{
     vec4 maxPoint;
 };
 
-struct ScreenToView{
+struct ScreenToViewISPC{
     mat4 inverseProjection;
     mat4 viewMatrix;
     uvec4 tileSizes;
@@ -22,7 +21,7 @@ struct ScreenToView{
     float zFar;
 };
 
-struct PointLightData{
+struct PointLightDataISPC{
     vec3 pos;
 	float radius;
 	vec3 color;
@@ -42,8 +41,8 @@ struct LightGrid{
 };
 
 //Function prototypes
-static vec4 clipToView(vec4 clip, uniform ScreenToView& screenToView);
-static vec4 screen2View(vec4 screen, uniform ScreenToView& screenToView);
+static vec4 clipToView(vec4 clip, uniform ScreenToViewISPC& screenToView);
+static vec4 screen2View(vec4 screen, uniform ScreenToViewISPC& screenToView);
 static vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance);
 static inline float dot(vec3 a, vec3 b);
 static inline vec3 vcross(vec3 v0, vec3 v1);
@@ -54,10 +53,10 @@ static inline vec3 toVec3(vec4 v);
 static inline vec4 toVec4(vec2 v, float z, float w);
 static inline vec4 toVec4(vec3 v, float w);
 static VolumeTileAABB toVolumeTileAABB(vec4 minP, vec4 maxP);
-static vec4 apply(uniform mat4 m, vec4 v);
+static vec4 apply(uniform mat4& m, vec4 v);
 static vec3 min(vec3 v1, vec3 v2);
 static vec3 max(vec3 v1, vec3 v2);
-static bool testSphereAABB(uniform ScreenToView& screenToView, vec3 pos, float radius, vec3 minPoint, vec3 maxPoint);
+static bool testSphereAABB(uniform ScreenToViewISPC& screenToView, uniform vec3& pos, uniform float& radius, vec3 minPoint, vec3 maxPoint);
 static float sqDistPointAABB(vec3 point, vec3 minPoint, vec3 maxPoint);
 
 vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance){
@@ -75,7 +74,7 @@ vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance){
     return result;
 }
 
-vec4 clipToView(vec4 clip, uniform ScreenToView& screenToView){
+vec4 clipToView(vec4 clip, uniform ScreenToViewISPC& screenToView){
     //View space transform
     vec4 view = apply(screenToView.inverseProjection, clip);
 
@@ -85,7 +84,7 @@ vec4 clipToView(vec4 clip, uniform ScreenToView& screenToView){
     return view;
 }
 
-vec4 screen2View(vec4 screen, uniform ScreenToView& screenToView)
+vec4 screen2View(vec4 screen, uniform ScreenToViewISPC& screenToView)
 {
     //Convert to NDC
     vec2 texCoord = screen.xy / screenToView.screenDimensions.xy;
@@ -175,16 +174,16 @@ inline vec3 vcross(vec3 v0, vec3 v1)
     return ret;
 }
 
-vec4 apply(uniform mat4 m, vec4 v)
+vec4 apply(uniform mat4& m, vec4 v)
 {
     vec4 ret;
-    for (size_t row = 0; row < 4; row++) 
+    for (size_t col = 0; col < 4; col++) 
     {
         float sum = 0;
-        for (int col = 0; col < 4; col++) {
-            sum += v[col] * m[row + col*4];
+        for (int row = 0; row < 4; row++) {
+            sum += v[col] * m[row * 4 + col];
         }
-        ret[row] = sum;
+        ret[col] = sum;
     }
     return ret;
 }
@@ -207,7 +206,7 @@ vec3 max(vec3 v1, vec3 v2)
     return ret;
 }
 
-bool testSphereAABB(uniform ScreenToView& screenToView, vec3 pos, float radius, vec3 minPoint, vec3 maxPoint)
+bool testSphereAABB(uniform ScreenToViewISPC& screenToView, uniform vec3& pos, uniform float& radius, vec3 minPoint, vec3 maxPoint)
 {
     vec3 center  = toVec3(apply(screenToView.viewMatrix, toVec4(pos, 1.0f)));
     float squaredDistance = sqDistPointAABB(center, minPoint, maxPoint);
@@ -233,7 +232,7 @@ float sqDistPointAABB(vec3 point, vec3 minPoint, vec3 maxPoint)
 }
 
 /// 16, 9, 24
-export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform int zSize, uniform ScreenToView& screenToView, uniform PointLightData pointLights[], uniform int lightCount, uniform LightGrid lightGrids[], uniform uint globalLightIndexList[])
+export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform int zSize, uniform ScreenToViewISPC& screenToView, uniform PointLightDataISPC pointLights[], uniform int lightCount, uniform LightGrid lightGrids[], uniform uint globalLightIndexList[])
 {
     uniform int32 globalIndexCount = 0;
 
