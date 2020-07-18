@@ -177,11 +177,11 @@ inline vec3 vcross(vec3 v0, vec3 v1)
 vec4 apply(uniform mat4& m, vec4 v)
 {
     vec4 ret;
-    for (size_t col = 0; col < 4; col++) 
+    for (uniform int col = 0; col < 4; col++) 
     {
         float sum = 0;
-        for (int row = 0; row < 4; row++) {
-            sum += v[col] * m[row * 4 + col];
+        for (uniform int row = 0; row < 4; row++) {
+            sum += v[row] * m[row * 4 + col];
         }
         ret[col] = sum;
     }
@@ -211,7 +211,7 @@ bool testSphereAABB(uniform ScreenToViewISPC& screenToView, uniform vec3& pos, u
     vec3 center  = toVec3(apply(screenToView.viewMatrix, toVec4(pos, 1.0f)));
     float squaredDistance = sqDistPointAABB(center, minPoint, maxPoint);
 
-    bool ret = (squaredDistance <= (radius * radius));
+	bool ret = (squaredDistance <= (radius * radius));
     return ret;
 }
 
