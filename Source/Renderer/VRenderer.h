@@ -166,6 +166,9 @@ public:
 	bool IsClusteShading() { return isClusteShading; }
 	void SetClusteShading(bool _isClusteShading) { isClusteShading = _isClusteShading; }
 
+	bool IsISPC() { return isIspc; }
+	void SetISPC(bool _isIspc) { isIspc = _isIspc; }
+
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();
 	std::array<VkVertexInputAttributeDescription, 6> GetAttributeDescriptions();

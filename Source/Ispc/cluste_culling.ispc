@@ -220,8 +220,8 @@ float sqDistPointAABB(vec3 point, vec3 minPoint, vec3 maxPoint)
     float sqDist = 0.0;
     for(uniform int i = 0; i < 3; ++i){
         float v = point[i];
-        if(v < maxPoint[i]){
-            sqDist += (maxPoint[i] - v) * (maxPoint[i] - v);
+        if(v < minPoint[i]){
+            sqDist += (minPoint[i] - v) * (minPoint[i] - v);
         }
         if(v > maxPoint[i]){
             sqDist += (v - maxPoint[i]) * (v - maxPoint[i]);
