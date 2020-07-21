@@ -169,6 +169,9 @@ public:
 	bool IsISPC() { return isIspc; }
 	void SetISPC(bool _isIspc) { isIspc = _isIspc; }
 
+	bool IsCpuClusteCull() { return isCpuClusteCull; }
+	void SetCpuClusteCull(bool _isCpuClusteCull) { isCpuClusteCull = _isCpuClusteCull; }
+
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();
 	std::array<VkVertexInputAttributeDescription, 6> GetAttributeDescriptions();
@@ -319,16 +322,22 @@ private:
 	VkDescriptorBufferInfo light_datas_buffer_info;
 
 	/// light indexes
-	VkBuffer light_indexes_buffer;
-	VkDeviceMemory light_indexes_buffer_memory;
+	VkBuffer local_light_indexes_buffer;
+	VkDeviceMemory local_light_indexes_buffer_memory;
+	VkBuffer gpu_light_indexes_buffer;
+	VkDeviceMemory gpu_light_indexes_buffer_memory;
 	void* light_indexes_buffer_data;
-	VkDescriptorBufferInfo light_indexes_buffer_info;
+	VkDescriptorBufferInfo local_light_indexes_buffer_info;
+	VkDescriptorBufferInfo gpu_light_indexes_buffer_info;
 
 	/// light grids
-	VkBuffer light_grids_buffer;
-	VkDeviceMemory light_grids_buffer_memory;
+	VkBuffer local_light_grids_buffer;
+	VkDeviceMemory local_light_grids_buffer_memory;
+	VkBuffer gpu_light_grids_buffer;
+	VkDeviceMemory gpu_light_grids_buffer_memory;
 	void* light_grids_buffer_data;
-	VkDescriptorBufferInfo light_grids_buffer_info;
+	VkDescriptorBufferInfo local_light_grids_buffer_info;
+	VkDescriptorBufferInfo gpu_light_grids_buffer_info;
 
 	/// index count
 	VkBuffer index_count_buffer;
@@ -338,6 +347,7 @@ private:
 
 	bool isClusteShading;
 	bool isIspc;
+	bool isCpuClusteCull;
 };
 
 

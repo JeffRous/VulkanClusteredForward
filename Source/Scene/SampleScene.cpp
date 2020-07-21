@@ -11,6 +11,7 @@ SampleScene::SampleScene()
 	Application::Inst()->SetRendererCamera(camera);
 	model = NULL;
 	last_control_state = 0;
+	shadingMode = NoClusteShading;
 }
 
 SampleScene::~SampleScene()
@@ -62,7 +63,34 @@ bool SampleScene::OnUpdate(float dt)
 	if (Application::Inst()->GetPressedKey() == GLFW_KEY_C)
 	{
 		VulkanRenderer* vRenderer = (VulkanRenderer*)Application::Inst()->GetRenderer();
-		vRenderer->SetClusteShading(!vRenderer->IsClusteShading());
+		if (shadingMode == NoClusteShading)
+		{
+			vRenderer->SetClusteShading(true);
+			vRenderer->SetCpuClusteCull(false);
+			vRenderer->SetISPC(false);
+			shadingMode = ClusteShading_Compute;
+		}
+		else if (shadingMode == ClusteShading_Compute)
+		{
+			vRenderer->SetClusteShading(true);
+			vRenderer->SetCpuClusteCull(true);
+			vRenderer->SetISPC(false);
+			shadingMode = ClusteShading_RawCpu;
+		}
+		else if (shadingMode == ClusteShading_RawCpu)
+		{
+			vRenderer->SetClusteShading(true);
+			vRenderer->SetCpuClusteCull(true);
+			vRenderer->SetISPC(true);
+			shadingMode = ClusteShading_ISPC;
+		}
+		else if (shadingMode == ClusteShading_ISPC)
+		{
+			vRenderer->SetClusteShading(false);
+			vRenderer->SetCpuClusteCull(false);
+			vRenderer->SetISPC(false);
+			shadingMode = NoClusteShading;
+		}
 	}
 
 	return true;

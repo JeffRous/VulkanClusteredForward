@@ -21,11 +21,7 @@
 #undef max
 #undef min
 
-///#define RAW_CPU_NOISPC
-
-#ifndef RAW_CPU_NOISPC
 static ispc::PointLightDataISPC* pointLightISPCDatas = NULL;
-#endif
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -44,8 +40,9 @@ const std::vector<const char*> deviceExtensions = {
 VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	:Renderer(win)
 {
-	isClusteShading = true;
-	isIspc = true;
+	isClusteShading = false;
+	isIspc = false;
+	isCpuClusteCull = false;
 	last_command_buffer_idx = UINT_MAX;
 	CreateInstance();
 	CreateSurface();
@@ -56,12 +53,7 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	CreateRenderPass();
 	CreateGraphicsPipeline();
 
-#ifndef RAW_CPU_NOISPC
-	if (isIspc)
-	{
-		pointLightISPCDatas = new ispc::PointLightDataISPC[MAX_LIGHT_NUM];
-	}
-#endif
+	pointLightISPCDatas = new ispc::PointLightDataISPC[MAX_LIGHT_NUM];
 
 	/// set computer number and tile size in screen space
 	tile_size_x = (unsigned int)std::ceilf(Application::Inst()->GetWidth() / (float)CLUSTE_X);;
@@ -161,13 +153,11 @@ void VulkanRenderer::CleanImage(VkImage& image, VkDeviceMemory& imageMem, VkImag
 
 void VulkanRenderer::CleanUp()
 {
-#ifndef RAW_CPU_NOISPC
 	if (pointLightISPCDatas != NULL)
 	{
 		delete[] pointLightISPCDatas;
 		pointLightISPCDatas = NULL;
 	}
-#endif
 
 	for (int i = 0; i < light_uniform_buffers.size(); i++)
 	{
@@ -1127,23 +1117,29 @@ void VulkanRenderer::CreateCompDescriptorSets()
 
 	/// light indexes
 	bufferSize = sizeof(glm::uint) * MAX_LIGHT_NUM * CLUSTE_NUM;
-	if( !isIspc )
-		CreateGraphicsStorageBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, light_indexes_buffer, light_indexes_buffer_memory);
-	else
-		CreateLocalStorageBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, light_indexes_buffer, light_indexes_buffer_memory);
-	light_indexes_buffer_info.buffer = light_indexes_buffer;
-	light_indexes_buffer_info.offset = 0;
-	light_indexes_buffer_info.range = bufferSize;
+	///if( !isIspc )
+		CreateGraphicsStorageBuffer(NULL, (uint32_t)bufferSize, gpu_light_indexes_buffer, gpu_light_indexes_buffer_memory);
+	///else
+		CreateLocalStorageBuffer(&light_indexes_buffer_data, (uint32_t)bufferSize, local_light_indexes_buffer, local_light_indexes_buffer_memory);
+	local_light_indexes_buffer_info.buffer = local_light_indexes_buffer;
+	local_light_indexes_buffer_info.offset = 0;
+	local_light_indexes_buffer_info.range = bufferSize;
+	gpu_light_indexes_buffer_info.buffer = gpu_light_indexes_buffer;
+	gpu_light_indexes_buffer_info.offset = 0;
+	gpu_light_indexes_buffer_info.range = bufferSize;
 
 	/// light grids
 	bufferSize = sizeof(LightGrid) * CLUSTE_NUM;
-	if( !isIspc )
-		CreateGraphicsStorageBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
-	else
-		CreateLocalStorageBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, light_grids_buffer, light_grids_buffer_memory);
-	light_grids_buffer_info.buffer = light_grids_buffer;
-	light_grids_buffer_info.offset = 0;
-	light_grids_buffer_info.range = bufferSize;
+	///if( !isIspc )
+		CreateGraphicsStorageBuffer(NULL, (uint32_t)bufferSize, gpu_light_grids_buffer, gpu_light_grids_buffer_memory);
+	///else
+		CreateLocalStorageBuffer(&light_grids_buffer_data, (uint32_t)bufferSize, local_light_grids_buffer, local_light_grids_buffer_memory);
+	gpu_light_grids_buffer_info.buffer = gpu_light_grids_buffer;
+	gpu_light_grids_buffer_info.offset = 0;
+	gpu_light_grids_buffer_info.range = bufferSize;
+	local_light_grids_buffer_info.buffer = local_light_grids_buffer;
+	local_light_grids_buffer_info.offset = 0;
+	local_light_grids_buffer_info.range = bufferSize;
 
 	/// global index count
 	bufferSize = sizeof(glm::uint);
@@ -1158,17 +1154,19 @@ void VulkanRenderer::ReleaseCompDescriptorSets()
 	UnmapBufferMemory(tile_aabbs_buffer_memory);
 	UnmapBufferMemory(screen_to_view_buffer_memory);
 	UnmapBufferMemory(light_datas_buffer_memory);
-	if (isIspc)
+	///if (isIspc)
 	{
-		UnmapBufferMemory(light_indexes_buffer_memory);
-		UnmapBufferMemory(light_grids_buffer_memory);
+		UnmapBufferMemory(local_light_indexes_buffer_memory);
+		UnmapBufferMemory(local_light_grids_buffer_memory);
 	}
 	UnmapBufferMemory(index_count_buffer_memory);
 	CleanBuffer(tile_aabbs_buffer, tile_aabbs_buffer_memory);
 	CleanBuffer(screen_to_view_buffer, screen_to_view_buffer_memory);
 	CleanBuffer(light_datas_buffer, light_datas_buffer_memory);
-	CleanBuffer(light_indexes_buffer, light_indexes_buffer_memory);
-	CleanBuffer(light_grids_buffer, light_grids_buffer_memory);
+	CleanBuffer(local_light_indexes_buffer, local_light_indexes_buffer_memory);
+	CleanBuffer(local_light_grids_buffer, local_light_grids_buffer_memory);
+	CleanBuffer(gpu_light_indexes_buffer, gpu_light_indexes_buffer_memory);
+	CleanBuffer(gpu_light_grids_buffer, gpu_light_grids_buffer_memory);
 	CleanBuffer(index_count_buffer, index_count_buffer_memory);
 	FreeCompDescriptorSets(comp_desc_set);
 }
@@ -1238,7 +1236,7 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	descriptorWrites[3].dstSet = comp_desc_set[active_command_buffer_idx];
 	descriptorWrites[3].descriptorCount = 1;
 	descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	descriptorWrites[3].pBufferInfo = &light_indexes_buffer_info;
+	descriptorWrites[3].pBufferInfo = &gpu_light_indexes_buffer_info;
 	descriptorWrites[3].dstArrayElement = 0;
 	descriptorWrites[3].dstBinding = 3;
 
@@ -1248,7 +1246,7 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 	descriptorWrites[4].dstSet = comp_desc_set[active_command_buffer_idx];
 	descriptorWrites[4].descriptorCount = 1;
 	descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	descriptorWrites[4].pBufferInfo = &light_grids_buffer_info;
+	descriptorWrites[4].pBufferInfo = &gpu_light_grids_buffer_info;
 	descriptorWrites[4].dstArrayElement = 0;
 	descriptorWrites[4].dstBinding = 4;
 
@@ -1299,9 +1297,9 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 			0,
 			indices.computeFamily.value(),
 			indices.graphicsFamily.value(),
-			light_indexes_buffer_info.buffer,
+			gpu_light_indexes_buffer_info.buffer,
 			0,
-			light_indexes_buffer_info.range,
+			gpu_light_indexes_buffer_info.range,
 		},
 		{
 			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
@@ -1310,9 +1308,9 @@ void VulkanRenderer::UpdateComputeDescriptorSet()
 			0,
 			indices.computeFamily.value(),
 			indices.graphicsFamily.value(),
-			light_grids_buffer_info.buffer,
+			gpu_light_grids_buffer_info.buffer,
 			0,
-			light_grids_buffer_info.range,
+			gpu_light_grids_buffer_info.range,
 		},
 	};
 
@@ -1651,7 +1649,10 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[3].dstSet = descSets[active_command_buffer_idx];
 		descriptorWrites[3].descriptorCount = 1;
 		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		descriptorWrites[3].pBufferInfo = &light_indexes_buffer_info;
+		if(!isClusteShading || isCpuClusteCull)
+			descriptorWrites[3].pBufferInfo = &local_light_indexes_buffer_info;
+		else
+			descriptorWrites[3].pBufferInfo = &gpu_light_indexes_buffer_info;
 		descriptorWrites[3].dstArrayElement = 0;
 		descriptorWrites[3].dstBinding = 3;
 
@@ -1661,7 +1662,10 @@ void VulkanRenderer::UpdateMaterial(Material* mat)
 		descriptorWrites[4].dstSet = descSets[active_command_buffer_idx];
 		descriptorWrites[4].descriptorCount = 1;
 		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		descriptorWrites[4].pBufferInfo = &light_grids_buffer_info;
+		if (!isClusteShading || isCpuClusteCull)
+			descriptorWrites[4].pBufferInfo = &local_light_grids_buffer_info;
+		else
+			descriptorWrites[4].pBufferInfo = &gpu_light_grids_buffer_info;
 		descriptorWrites[4].dstArrayElement = 0;
 		descriptorWrites[4].dstBinding = 4;
 
@@ -1927,16 +1931,15 @@ void VulkanRenderer::AddLight(PointLight* light)
 	int idx = light_infos.size() - 1;
 	memcpy(light_uniform_buffer_datas[idx], &lightData, sizeof(PointLightData));
 
-	if (isClusteShading)
+	///if (isClusteShading)
 	{	
-		if (!isIspc)
+		///if (!isCpuClusteCull)
 		{
 			// for clust shading compute data
 			memcpy((unsigned char*)light_datas_buffer_data + idx * sizeof(PointLightData), &lightData, sizeof(PointLightData));
 		}
-		else
+		///else
 		{
-#ifndef RAW_CPU_NOISPC
 			/// set ISPC light
 			memcpy(&pointLightISPCDatas[idx].color, &lightData.color, sizeof(glm::vec3));
 			memcpy(&pointLightISPCDatas[idx].pos, &lightData.pos, sizeof(glm::vec3));
@@ -1948,7 +1951,6 @@ void VulkanRenderer::AddLight(PointLight* light)
 			pointLightISPCDatas[idx].attenuation_constant = lightData.attenuation_constant;
 			pointLightISPCDatas[idx].attenuation_linear = lightData.attenuation_linear;
 			pointLightISPCDatas[idx].attenuation_exp = lightData.attenuation_exp;
-#endif
 		}
 	}
 }
@@ -1979,7 +1981,7 @@ void VulkanRenderer::RenderBegin()
 	/// branch ispc/gpu cluste_shading
 	if (isClusteShading)
 	{
-		if (isIspc)
+		if (isCpuClusteCull)
 		{
 			/// update input data
 			ScreenToView screenToView;
@@ -1988,20 +1990,23 @@ void VulkanRenderer::RenderBegin()
 			screenToView.tileSizes = glm::uvec4(group_num, tile_size_x);
 
 			PointLightData* lightDatas = light_infos.data();
-#ifdef RAW_CPU_NOISPC
-			/// calculation with raw cpu for debug and compare
-			RawCpu::cluste_culling(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToView, light_infos.data(), light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
-#else
-			/// calculation with ispc
-			ispc::ScreenToViewISPC screenToViewIspc;
-			memcpy(&screenToViewIspc.inverseProjection, &screenToView.inverseProjection, sizeof(glm::mat4));
-			memcpy(&screenToViewIspc.viewMatrix, &screenToView.viewMatrix, sizeof(glm::mat4));
-			memcpy(&screenToViewIspc.tileSizes, &screenToView.tileSizes, sizeof(glm::uvec4));
-			memcpy(&screenToViewIspc.screenDimensions, &screenToView.screenDimensions, sizeof(glm::uvec2));
-			screenToViewIspc.zFar = screenToView.zFar;
-			screenToViewIspc.zNear = screenToView.zNear;
-			ispc::cluste_culling_ispc(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToViewIspc, pointLightISPCDatas, light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
-#endif
+			if (!isIspc)
+			{
+				/// calculation with raw cpu for debug and compare
+				RawCpu::cluste_culling(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToView, light_infos.data(), light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
+			}
+			else
+			{
+				/// calculation with ispc
+				ispc::ScreenToViewISPC screenToViewIspc;
+				memcpy(&screenToViewIspc.inverseProjection, &screenToView.inverseProjection, sizeof(glm::mat4));
+				memcpy(&screenToViewIspc.viewMatrix, &screenToView.viewMatrix, sizeof(glm::mat4));
+				memcpy(&screenToViewIspc.tileSizes, &screenToView.tileSizes, sizeof(glm::uvec4));
+				memcpy(&screenToViewIspc.screenDimensions, &screenToView.screenDimensions, sizeof(glm::uvec2));
+				screenToViewIspc.zFar = screenToView.zFar;
+				screenToViewIspc.zNear = screenToView.zNear;
+				ispc::cluste_culling_ispc(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToViewIspc, pointLightISPCDatas, light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
+			}
 		}
 		else
 		{
@@ -2017,7 +2022,7 @@ void VulkanRenderer::RenderBegin()
 		throw std::runtime_error("failed to begin recording command buffer!");
 	}
 
-	if (isClusteShading && !isIspc)
+	if (isClusteShading && !isCpuClusteCull)
 	{
 		QueueFamilyIndices indices = FindQueueFamilies(physical_device);
 		VkBufferMemoryBarrier buffer_barriers[2] =
@@ -2029,9 +2034,9 @@ void VulkanRenderer::RenderBegin()
 				VK_ACCESS_SHADER_READ_BIT,
 				indices.computeFamily.value(),
 				indices.graphicsFamily.value(),
-				light_indexes_buffer_info.buffer,
+				gpu_light_indexes_buffer_info.buffer,
 				0,
-				light_indexes_buffer_info.range,
+				gpu_light_indexes_buffer_info.range,
 			},
 			{
 				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
@@ -2040,9 +2045,9 @@ void VulkanRenderer::RenderBegin()
 				VK_ACCESS_SHADER_READ_BIT,
 				indices.computeFamily.value(),
 				indices.graphicsFamily.value(),
-				light_grids_buffer_info.buffer,
+				gpu_light_grids_buffer_info.buffer,
 				0,
-				light_grids_buffer_info.range,
+				gpu_light_grids_buffer_info.range,
 			},
 		};
 
@@ -2117,7 +2122,7 @@ void VulkanRenderer::Flush()
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	VkSemaphore waitSemaphores[2] = { image_available_semaphore, compute_finished_semaphore };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };	/// in the stage wait the sema
-	if(isClusteShading && !isIspc)
+	if(isClusteShading && !isCpuClusteCull)
 		submitInfo.waitSemaphoreCount = 2;
 	else
 		submitInfo.waitSemaphoreCount = 1;

@@ -8,6 +8,13 @@ class TOModel;
 class PointLight;
 class SampleScene : public Scene
 {
+	enum ShadingMode
+	{
+		NoClusteShading,
+		ClusteShading_Compute,
+		ClusteShading_RawCpu,
+		ClusteShading_ISPC,
+	};
 public:
 	SampleScene();
 	virtual ~SampleScene();
@@ -29,6 +36,8 @@ private:
 	int last_control_state;
 
 	PointLight* light[MAX_LIGHT_NUM];
+
+	ShadingMode shadingMode;
 };
 
 #endif // !__SAMPLE_SCENE_H__

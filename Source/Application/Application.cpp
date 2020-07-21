@@ -142,10 +142,27 @@ void Application::showFPS(GLFWwindow *pWindow)
 	nb_frames++;
 	if (delta >= 1.0) { // If last cout was more than 1 sec ago
 		double fps = double(nb_frames) / delta;
+		const char* mode = "No Cluste Shading";
+		if (((VulkanRenderer*)renderer)->IsClusteShading())
+		{
+			if (!((VulkanRenderer*)renderer)->IsCpuClusteCull())
+				mode = "Computer Shader";
+			else
+			{
+				if (!((VulkanRenderer*)renderer)->IsISPC())
+				{
+					mode = "Raw C++";
+				}
+				else
+				{
+					mode = "ISPC";
+				}
+			}
+		}
 
 		char title[256];
 		title[255] = '\0';
-		snprintf(title, 255, "[FPS: %3.2f] [ClusteShading: %s]", fps, ((VulkanRenderer*)renderer)->IsClusteShading() ? "ON" : "OFF");
+		snprintf(title, 255, "[FPS: %3.2f] [ClusteShading: %s] [%s]", fps, ((VulkanRenderer*)renderer)->IsClusteShading() ? "ON" : "OFF", mode);
 		glfwSetWindowTitle(pWindow, title);
 		nb_frames = 0;
 		last_fps_time = currentTime;
