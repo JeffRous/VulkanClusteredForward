@@ -21,7 +21,7 @@
 #undef max
 #undef min
 
-#define RAW_CPU_NOISPC
+///#define RAW_CPU_NOISPC
 
 #ifndef RAW_CPU_NOISPC
 static ispc::PointLightDataISPC* pointLightISPCDatas = NULL;
@@ -45,7 +45,7 @@ VulkanRenderer::VulkanRenderer(GLFWwindow* win)
 	:Renderer(win)
 {
 	isClusteShading = true;
-	isIspc = false;
+	isIspc = true;
 	last_command_buffer_idx = UINT_MAX;
 	CreateInstance();
 	CreateSurface();
