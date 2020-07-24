@@ -172,6 +172,8 @@ public:
 	bool IsCpuClusteCull() { return isCpuClusteCull; }
 	void SetCpuClusteCull(bool _isCpuClusteCull) { isCpuClusteCull = _isCpuClusteCull; }
 
+	double GetCpuCullTime() { return cpuCullTime; }
+
 private:
 	std::array<VkVertexInputBindingDescription, 1> GetBindingDescription();
 	std::array<VkVertexInputAttributeDescription, 6> GetAttributeDescriptions();
@@ -348,6 +350,8 @@ private:
 	bool isClusteShading;
 	bool isIspc;
 	bool isCpuClusteCull;
+
+	double cpuCullTime;
 };
 
 

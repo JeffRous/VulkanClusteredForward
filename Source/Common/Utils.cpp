@@ -1,8 +1,13 @@
 #include "Utils.h"
 
 #include <windows.h>
+#include <stdio.h>
 #include <iosfwd>
 #include <fstream>
+#include <time.h>
+#include <chrono>
+
+using namespace std;
 
 namespace Utils
 {
@@ -25,11 +30,20 @@ namespace Utils
 		return buffer;
 	}
 	
-	uint64_t GetMS()
+	double GetTimeEclapsed()
 	{
-		SYSTEMTIME time;
-		GetSystemTime(&time);
-		LONG time_ms = (time.wSecond * 1000) + time.wMilliseconds;
-		return time_ms;
+		return (double)clock() / CLOCKS_PER_SEC;
+	}
+
+	static std::chrono::steady_clock::time_point start, end;
+	void GetMSStart()
+	{
+		start = std::chrono::high_resolution_clock::now();
+	}
+
+	double GetMSEnd()
+	{
+		end = std::chrono::high_resolution_clock::now();
+		return (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0;
 	}
 };

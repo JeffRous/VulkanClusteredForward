@@ -7,7 +7,10 @@
 namespace Utils
 {
 	std::vector<char> readFile(const std::string& filename);
-	uint64_t GetMS();
+	double GetTimeEclapsed();
+
+	void GetMSStart();
+	double GetMSEnd();
 };
 
 #endif // !__UTILS_H__

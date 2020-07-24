@@ -80,7 +80,7 @@ private:
 	Scene* next_scene;
 
 	float delta_time;
-	uint64_t last_time;
+	double last_time;
 
 	double last_fps_time;
 	int nb_frames;

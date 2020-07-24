@@ -1990,6 +1990,7 @@ void VulkanRenderer::RenderBegin()
 			screenToView.tileSizes = glm::uvec4(group_num, tile_size_x);
 
 			PointLightData* lightDatas = light_infos.data();
+			Utils::GetMSStart();
 			if (!isIspc)
 			{
 				/// calculation with raw cpu for debug and compare
@@ -2007,11 +2008,13 @@ void VulkanRenderer::RenderBegin()
 				screenToViewIspc.zNear = screenToView.zNear;
 				ispc::cluste_culling_ispc(CLUSTE_X, CLUSTE_Y, CLUSTE_Z, screenToViewIspc, pointLightISPCDatas, light_infos.size(), (LightGrid*)light_grids_buffer_data, (uint32_t*)light_indexes_buffer_data);
 			}
+			cpuCullTime = Utils::GetMSEnd();
 		}
 		else
 		{
 			SetScreenToViewData((ScreenToView*)screen_to_view_buffer_data);
 			UpdateComputeDescriptorSet();
+			cpuCullTime = 0.0;
 		}
 	}
 

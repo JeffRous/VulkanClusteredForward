@@ -22,7 +22,7 @@ Application::Application()
 	control_state = 0;
 	scroll_offset = 0.0f;
 	key_pressed = false;
-	last_time = Utils::GetMS();
+	last_time = Utils::GetTimeEclapsed();
 }
 
 Application::~Application()
@@ -162,7 +162,7 @@ void Application::showFPS(GLFWwindow *pWindow)
 
 		char title[256];
 		title[255] = '\0';
-		snprintf(title, 255, "[FPS: %3.2f] [ClusteShading: %s] [%s]", fps, ((VulkanRenderer*)renderer)->IsClusteShading() ? "ON" : "OFF", mode);
+		snprintf(title, 255, "[FPS: %3.2f] [ClusteShading: %s] [%s][Cull:%.4f(ms)]", fps, ((VulkanRenderer*)renderer)->IsClusteShading() ? "ON" : "OFF", mode, ((VulkanRenderer*)renderer)->GetCpuCullTime());
 		glfwSetWindowTitle(pWindow, title);
 		nb_frames = 0;
 		last_fps_time = currentTime;
@@ -172,8 +172,8 @@ void Application::showFPS(GLFWwindow *pWindow)
 bool Application::MainLoop()
 {
 	/// time offset
-	uint64_t nowTime = Utils::GetMS();
-	delta_time = (float)(nowTime - last_time) / 1000.0f;
+	double nowTime = Utils::GetTimeEclapsed();
+	delta_time = (float)(nowTime - last_time);
 	last_time = nowTime;
 
 	/// show fps
