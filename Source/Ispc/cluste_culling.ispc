@@ -1,3 +1,5 @@
+#define MAX_LIGHT_NUM 16
+
 typedef int<2> uvec2;
 typedef int<3> uvec3;
 typedef int<4> uvec4;
@@ -56,7 +58,7 @@ static VolumeTileAABB toVolumeTileAABB(vec4 minP, vec4 maxP);
 static vec4 apply(uniform mat4& m, vec4 v);
 static vec3 min(vec3 v1, vec3 v2);
 static vec3 max(vec3 v1, vec3 v2);
-static bool testSphereAABB(uniform ScreenToViewISPC& screenToView, uniform vec3& pos, uniform float& radius, vec3 minPoint, vec3 maxPoint);
+static bool testSphereAABB(uniform ScreenToViewISPC& screenToView, uniform vec3& pos, uniform float& radius, vec3 minPoint, vec3 maxPoint, vec4& viewMtx);
 static float sqDistPointAABB(vec3 point, vec3 minPoint, vec3 maxPoint);
 
 vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance){
@@ -188,6 +190,11 @@ vec4 apply(uniform mat4& m, vec4 v)
     return ret;
 }
 
+float apply_parallel( vec4& m, uniform vec3& v )
+{
+	return m[0] * v[0] + m[1] * v[1] + m[2] * v[2] + m[3];
+}
+
 vec3 min(vec3 v1, vec3 v2)
 {
     vec3 ret;
@@ -206,11 +213,15 @@ vec3 max(vec3 v1, vec3 v2)
     return ret;
 }
 
-bool testSphereAABB(uniform ScreenToViewISPC& screenToView, uniform vec3& pos, uniform float& radius, vec3 minPoint, vec3 maxPoint)
+bool testSphereAABB(uniform ScreenToViewISPC& screenToView, uniform vec3& pos, uniform float& radius, vec3 minPoint, vec3 maxPoint, vec4& viewMtx)
 {
-    vec3 center  = toVec3(apply(screenToView.viewMatrix, toVec4(pos, 1.0f)));
-    float squaredDistance = sqDistPointAABB(center, minPoint, maxPoint);
-
+    ///vec3 center  = toVec3(apply(screenToView.viewMatrix, toVec4(pos, 1.0f)));
+	float center_ = apply_parallel(viewMtx, pos);
+	vec3 center;
+	center.x = broadcast(center_, 0);
+	center.y = broadcast(center_, 1);
+	center.z = broadcast(center_, 2);
+	float squaredDistance = sqDistPointAABB(center, minPoint, maxPoint);
 	bool ret = (squaredDistance <= (radius * radius));
     return ret;
 }
@@ -236,6 +247,19 @@ export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform i
 {
     uniform int32 globalIndexCount = 0;
 
+	//matrix load
+	varying vec4 viewMtx;
+	varying vec4 inverseMtx;
+	///aos_to_soa4(&screenToView.viewMatrix[0], &viewMtx[0], &viewMtx[1], &viewMtx[2], &viewMtx[3]);	very slow >5ms
+	for( uniform int i = 0; i < 4; i++ )
+	{
+		if(programIndex<4)
+		{
+			viewMtx[i] = screenToView.viewMatrix[i * 4+programIndex%4];
+			inverseMtx[i] = screenToView.inverseProjection[i * 4 + programIndex%4];
+		}
+	}
+	
     //Eye position is zero in view space
     const vec3 eyePos = toVec3(0.0);
     float zNear = screenToView.zNear;
@@ -279,7 +303,7 @@ export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform i
                 {
                     if(pointLights[light].enabled  == 1)
                     {
-                        if( testSphereAABB(screenToView, pointLights[light].pos, pointLights[light].radius, minPointAABB, maxPointAABB) )
+                        if( testSphereAABB(screenToView, pointLights[light].pos, pointLights[light].radius, minPointAABB, maxPointAABB, viewMtx) )
                         {
                             visibleLightIndices[visibleLightCount] = light;
                             visibleLightCount += 1;
