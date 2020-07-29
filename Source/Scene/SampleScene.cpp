@@ -91,6 +91,7 @@ bool SampleScene::OnUpdate(float dt)
 			vRenderer->SetISPC(false);
 			shadingMode = NoClusteShading;
 		}
+		vRenderer->ClearLightBufferData();
 	}
 
 	return true;

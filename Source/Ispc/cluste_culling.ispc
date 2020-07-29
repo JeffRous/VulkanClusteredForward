@@ -250,13 +250,13 @@ export void cluste_culling_ispc (uniform int xSize, uniform int ySize, uniform i
 	//matrix load
 	varying vec4 viewMtx;
 	varying vec4 inverseMtx;
-	///aos_to_soa4(&screenToView.viewMatrix[0], &viewMtx[0], &viewMtx[1], &viewMtx[2], &viewMtx[3]);	very slow >5ms
+	///aos_to_soa4(&screenToView.viewMatrix[0], &viewMtx[0], &viewMtx[1], &viewMtx[2], &viewMtx[3]);	///very slow >5ms
 	for( uniform int i = 0; i < 4; i++ )
 	{
 		if(programIndex<4)
 		{
 			viewMtx[i] = screenToView.viewMatrix[i * 4+programIndex%4];
-			inverseMtx[i] = screenToView.inverseProjection[i * 4 + programIndex%4];
+			///inverseMtx[i] = screenToView.inverseProjection[i * 4 + programIndex%4];
 		}
 	}
 	

@@ -1972,6 +1972,12 @@ void VulkanRenderer::SetScreenToViewData(ScreenToView* stv)
 	stv->zFar = camera->GetFarDistance();
 }
 
+void VulkanRenderer::ClearLightBufferData()
+{
+	memset(light_grids_buffer_data, 0, sizeof(LightGrid) * CLUSTE_NUM);
+	memset(light_indexes_buffer_data, 0, sizeof(glm::uint) * MAX_LIGHT_NUM * CLUSTE_NUM);
+}
+
 void VulkanRenderer::RenderBegin()
 {
 	/// set camera
@@ -2001,6 +2007,7 @@ void VulkanRenderer::RenderBegin()
 				/// calculation with ispc
 				ispc::ScreenToViewISPC screenToViewIspc;
 				memcpy(&screenToViewIspc.inverseProjection, &screenToView.inverseProjection, sizeof(glm::mat4));
+				///screenToView.viewMatrix = glm::transpose(screenToView.viewMatrix);
 				memcpy(&screenToViewIspc.viewMatrix, &screenToView.viewMatrix, sizeof(glm::mat4));
 				memcpy(&screenToViewIspc.tileSizes, &screenToView.tileSizes, sizeof(glm::uvec4));
 				memcpy(&screenToViewIspc.screenDimensions, &screenToView.screenDimensions, sizeof(glm::uvec2));
